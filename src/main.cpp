@@ -6,6 +6,7 @@
 #include "trace.h"
 #include "lexer.h"
 #include "parser.h"
+#include "sema.h"
 
 using namespace cviz;
 
@@ -15,7 +16,7 @@ static void print_usage() {
         "\n"
         "  --dump-tokens        print the token stream\n"
         "  --dump-ast           print the abstract syntax tree\n"
-        "  --emit-trace <path>  write the structured trace (not yet implemented)\n"
+        "  --emit-trace <path>  write the structured trace as JSON\n"
         "  -h, --help           show this message\n";
 }
 
@@ -195,6 +196,31 @@ static void trace_decl(Trace& tr, const Decl* d) {
     tr.event(d->id, o.str(), d->span);
 }
 
+static void trace_sema(Trace& tr, const Sema& sema) {
+    for (const SemaEvent& e : sema.events()) {
+        std::ostringstream o;
+        switch (e.kind) {
+            case SemaEvent::Kind::ScopeOpen:
+                o << "\"kind\":\"scope_open\",\"scope\":" << e.scope
+                  << ",\"of\":" << q(e.of);
+                break;
+            case SemaEvent::Kind::ScopeClose:
+                o << "\"kind\":\"scope_close\",\"scope\":" << e.scope;
+                break;
+            case SemaEvent::Kind::SymbolDecl:
+                o << "\"kind\":\"symbol\",\"name\":" << q(e.name)
+                  << ",\"type\":" << q(e.type)
+                  << ",\"scope\":" << e.scope;
+                break;
+            case SemaEvent::Kind::TypeAssign:
+                o << "\"kind\":\"type\",\"type\":" << q(e.type)
+                  << ",\"from\":{\"phase\":\"parse\",\"id\":" << e.node << "}";
+                break;
+        }
+        tr.event(e.id, o.str(), e.span);
+    }
+}
+
 int main(int argc, char** argv) {
     std::string input;
     std::string trace_path;
@@ -270,6 +296,15 @@ int main(int argc, char** argv) {
     }
     for (const Diagnostic& d : parser.diagnostics()) report(src, d);
 
+    trace.begin_phase("sem");
+    Sema sema(src);
+    if (!parser.failed()) sema.analyse(tu);
+    trace_sema(trace, sema);
+    for (const Diagnostic& d : sema.diagnostics()) trace.diagnostic(d);
+    trace.end_phase(!sema.failed());
+
+    for (const Diagnostic& d : sema.diagnostics()) report(src, d);
+
     if (!trace_path.empty()) {
         if (!trace.write(trace_path)) {
             std::cerr << "cviz: cannot write " << trace_path << "\n";
@@ -277,5 +312,5 @@ int main(int argc, char** argv) {
         }
     }
 
-    return (lexer.failed() || parser.failed()) ? 1 : 0;   
+    return (lexer.failed() || parser.failed() || sema.failed()) ? 1 : 0;
 } 
