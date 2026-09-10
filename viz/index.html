@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>cviz — compilation trace</title>
+<style>
+  :root {
+    --bg: #fbfbfa; --panel: #fff; --line: #d7dbe0; --ink: #1e2530;
+    --muted: #6b7480; --accent: #2e4257; --hl: #dde3ea;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
+  }
+  header {
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 16px; background: var(--panel);
+  }
+  h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .02em; }
+  #file { color: var(--muted); font-size: 13px; }
+  #load { margin-left: auto; font-size: 13px; }
+  nav {
+    display: flex; gap: 2px; padding: 0 20px;
+    border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  nav button {
+    border: 1px solid transparent; border-bottom: none; background: none;
+    padding: 8px 14px; font: inherit; font-size: 13px; color: var(--muted);
+    cursor: pointer; border-radius: 4px 4px 0 0;
+  }
+  nav button.on {
+    background: var(--bg); color: var(--accent); font-weight: 600;
+    border-color: var(--line);
+  }
+  nav button:disabled { opacity: .35; cursor: default; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 18px 20px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
+  .head {
+    padding: 7px 12px; border-bottom: 1px solid var(--line);
+    font-size: 12px; color: var(--muted); text-transform: lowercase;
+  }
+  .body { padding: 10px 12px; overflow: auto; max-height: 68vh; }
+  pre { margin: 0; font: 12.5px/1.65 "Cascadia Mono", Consolas, monospace; }
+  .srcline { display: block; padding: 0 4px; border-radius: 2px; }
+  .srcline .no {
+    display: inline-block; width: 2.4em; color: var(--muted);
+    text-align: right; margin-right: 12px; user-select: none;
+  }
+  .srcline.on { background: var(--hl); }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  td { padding: 2px 8px 2px 0; vertical-align: top; }
+  tr.row { cursor: pointer; }
+  tr.row:hover td { background: #f1f3f6; }
+  tr.row.on td { background: var(--hl); }
+  .pos { color: var(--muted); font-family: Consolas, monospace; white-space: nowrap; }
+  .cls { color: var(--accent); font-family: Consolas, monospace; }
+  .lex { font-family: Consolas, monospace; }
+  .tree { font: 12.5px/1.7 Consolas, monospace; }
+  .node { cursor: pointer; padding: 0 3px; border-radius: 2px; display: inline-block; }
+  .node:hover { background: #f1f3f6; }
+  .node.on { background: var(--hl); }
+  .kind { color: var(--accent); }
+  .label { color: var(--ink); }
+  .diag { color: #a33; font-size: 12.5px; margin-bottom: 6px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>cviz</h1>
+  <span id="file">no trace loaded</span>
+  <input type="file" id="load" accept=".json">
+</header>
+
+<nav id="tabs"></nav>
+
+<main>
+  <section>
+    <div class="head">source</div>
+    <div class="body"><pre id="src"></pre></div>
+  </section>
+  <section>
+    <div class="head" id="panelhead">phase output</div>
+    <div class="body" id="out"><div class="empty">Load a trace file to begin.</div></div>
+  </section>
+</main>
+
+<script>
+const PHASES = [
+  ["preprocess", "Preprocessor"], ["lex", "Tokens"], ["parse", "Syntax tree"],
+  ["sem", "Symbols"], ["ir", "IR"], ["cfg", "Control flow"],
+  ["opt", "Optimised"], ["codegen", "Assembly"]
+];
+
+let trace = null, active = null;
+
+document.getElementById("load").addEventListener("change", ev => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try { load(JSON.parse(r.result)); }
+    catch (e) { alert("Could not parse trace: " + e.message); }
+  };
+  r.readAsText(f);
+});
+
+function load(t) {
+  trace = t;
+  document.getElementById("file").textContent = t.source.file;
+  renderSource();
+  buildTabs();
+  const first = PHASES.find(p => phase(p[0]));
+  if (first) select(first[0]);
+}
+
+function phase(name) {
+  return trace ? trace.phases.find(p => p.phase === name) : null;
+}
+
+function renderSource() {
+  const el = document.getElementById("src");
+  el.innerHTML = "";
+  trace.source.lines.forEach((line, i) => {
+    const s = document.createElement("span");
+    s.className = "srcline";
+    s.dataset.line = i + 1;
+    s.innerHTML = '<span class="no">' + (i + 1) + "</span>";
+    s.appendChild(document.createTextNode(line));
+    el.appendChild(s);
+  });
+}
+
+function buildTabs() {
+  const nav = document.getElementById("tabs");
+  nav.innerHTML = "";
+  PHASES.forEach(([id, title]) => {
+    const b = document.createElement("button");
+    b.textContent = title;
+    b.disabled = !phase(id);
+    b.onclick = () => select(id);
+    b.dataset.phase = id;
+    nav.appendChild(b);
+  });
+}
+
+function select(id) {
+  active = id;
+  document.querySelectorAll("#tabs button").forEach(b =>
+    b.classList.toggle("on", b.dataset.phase === id));
+  const p = phase(id);
+  document.getElementById("panelhead").textContent =
+    p ? p.phase + " — " + p.status : "phase output";
+  const out = document.getElementById("out");
+  out.innerHTML = "";
+  if (!p) { out.innerHTML = '<div class="empty">Phase not present.</div>'; return; }
+
+  p.diagnostics.forEach(d => {
+    const div = document.createElement("div");
+    div.className = "diag";
+    div.textContent = d.span.line + ":" + d.span.col + "  " +
+                      d.message + "  [" + d.code + "]";
+    div.onclick = () => highlight(d.span);
+    out.appendChild(div);
+  });
+
+  if (id === "lex") renderTokens(p, out);
+  else if (id === "parse") renderTree(p, out);
+  else out.appendChild(rawList(p));
+}
+
+function renderTokens(p, out) {
+  const t = document.createElement("table");
+  p.events.forEach(e => {
+    const tr = document.createElement("tr");
+    tr.className = "row";
+    tr.innerHTML =
+      '<td class="pos">' + (e.span ? e.span.line + ":" + e.span.col : "") + "</td>" +
+      '<td class="cls">' + e.tclass + "</td>" +
+      '<td class="lex">' + escapeHtml(e.lexeme || "") + "</td>";
+    tr.onclick = () => { markRow(tr); highlight(e.span); };
+    t.appendChild(tr);
+  });
+  out.appendChild(t);
+}
+
+function renderTree(p, out) {
+  const byId = {};
+  p.events.forEach(e => byId[e.id] = e);
+  const roots = p.events.filter(e => e.root);
+  const box = document.createElement("div");
+  box.className = "tree";
+  roots.forEach(r => box.appendChild(treeNode(r, byId, 0)));
+  if (!roots.length) box.innerHTML = '<div class="empty">No declarations parsed.</div>';
+  out.appendChild(box);
+}
+
+function treeNode(e, byId, depth) {
+  const wrap = document.createElement("div");
+  const line = document.createElement("div");
+  line.style.paddingLeft = (depth * 18) + "px";
+
+  const n = document.createElement("span");
+  n.className = "node";
+  n.innerHTML = '<span class="kind">' + e.node + "</span>" +
+                (e.label ? ' <span class="label">' + escapeHtml(e.label) + "</span>" : "");
+  n.onclick = ev => { ev.stopPropagation(); markNode(n); highlight(e.span); };
+  line.appendChild(n);
+  wrap.appendChild(line);
+
+  (e.children || []).forEach(cid => {
+    const c = byId[cid];
+    if (c) wrap.appendChild(treeNode(c, byId, depth + 1));
+  });
+  return wrap;
+}
+
+function rawList(p) {
+  const pre = document.createElement("pre");
+  pre.textContent = p.events.map(e => JSON.stringify(e)).join("\n");
+  return pre;
+}
+
+function markRow(tr) {
+  document.querySelectorAll("tr.row.on").forEach(x => x.classList.remove("on"));
+  tr.classList.add("on");
+}
+
+function markNode(n) {
+  document.querySelectorAll(".node.on").forEach(x => x.classList.remove("on"));
+  n.classList.add("on");
+}
+
+function highlight(span) {
+  document.querySelectorAll(".srcline.on").forEach(x => x.classList.remove("on"));
+  if (!span || !span.line) return;
+  const el = document.querySelector('.srcline[data-line="' + span.line + '"]');
+  if (el) { el.classList.add("on"); el.scrollIntoView({block: "center"}); }
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+</script>
+</body>
+</html>

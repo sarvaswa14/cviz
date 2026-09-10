@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <sstream>
+#include "trace.h"
 #include "lexer.h"
 #include "parser.h"
 
@@ -106,6 +108,93 @@ static void dump_decl(const Decl* dcl, int d) {
     }
 }
 
+static std::string q(const std::string& s) {
+    return "\"" + Trace::escape(s) + "\"";
+}
+
+static void trace_expr(Trace& tr, const Expr* e, std::vector<int>& kids);
+static void trace_stmt(Trace& tr, const Stmt* s);
+static void trace_decl(Trace& tr, const Decl* d);
+
+static void trace_expr(Trace& tr, const Expr* e, std::vector<int>& kids) {
+    if (!e) return;
+    kids.push_back(e->id);
+
+    std::vector<int> mine;
+    trace_expr(tr, e->lhs.get(), mine);
+    trace_expr(tr, e->rhs.get(), mine);
+    trace_expr(tr, e->third.get(), mine);
+    for (const auto& a : e->args) trace_expr(tr, a.get(), mine);
+
+    std::ostringstream o;
+    o << "\"kind\":\"node\",\"node\":" << q(e->kind_name())
+      << ",\"label\":" << q(e->label()) << ",\"children\":[";
+    for (size_t i = 0; i < mine.size(); ++i) {
+        if (i) o << ",";
+        o << mine[i];
+    }
+    o << "]";
+    tr.event(e->id, o.str(), e->span);
+}
+
+static void trace_stmt(Trace& tr, const Stmt* s) {
+    if (!s) return;
+
+    std::vector<int> kids;
+    trace_expr(tr, s->expr.get(), kids);
+    trace_expr(tr, s->init_expr.get(), kids);
+    trace_expr(tr, s->cond_expr.get(), kids);
+    trace_expr(tr, s->step_expr.get(), kids);
+    if (s->decl) { trace_decl(tr, s->decl.get()); kids.push_back(s->decl->id); }
+    if (s->body)      { trace_stmt(tr, s->body.get());      kids.push_back(s->body->id); }
+    if (s->else_body) { trace_stmt(tr, s->else_body.get()); kids.push_back(s->else_body->id); }
+    for (const auto& it : s->items) {
+        trace_stmt(tr, it.get());
+        kids.push_back(it->id);
+    }
+
+    std::ostringstream o;
+    o << "\"kind\":\"node\",\"node\":" << q(s->kind_name())
+      << ",\"label\":\"\",\"children\":[";
+    for (size_t i = 0; i < kids.size(); ++i) {
+        if (i) o << ",";
+        o << kids[i];
+    }
+    o << "]";
+    tr.event(s->id, o.str(), s->span);
+}
+
+static void trace_decl(Trace& tr, const Decl* d) {
+    if (!d) return;
+
+    std::vector<int> kids;
+    std::string label;
+
+    if (d->kind == DeclKind::Function) {
+        label = d->func_name + " : " +
+                (d->func_type ? d->func_type->to_string() : "?");
+        if (d->body) { trace_stmt(tr, d->body.get()); kids.push_back(d->body->id); }
+    } else if (d->kind == DeclKind::StructDef) {
+        label = "struct " + d->tag;
+    } else {
+        for (const auto& dr : d->declarators) {
+            if (!label.empty()) label += ", ";
+            label += dr.name + " : " + (dr.type ? dr.type->to_string() : "?");
+            if (dr.init) trace_expr(tr, dr.init.get(), kids);
+        }
+    }
+
+    std::ostringstream o;
+    o << "\"kind\":\"node\",\"node\":" << q(d->kind_name())
+      << ",\"label\":" << q(label) << ",\"root\":true,\"children\":[";
+    for (size_t i = 0; i < kids.size(); ++i) {
+        if (i) o << ",";
+        o << kids[i];
+    }
+    o << "]";
+    tr.event(d->id, o.str(), d->span);
+}
+
 int main(int argc, char** argv) {
     std::string input;
     std::string trace_path;
@@ -145,8 +234,20 @@ int main(int argc, char** argv) {
         return 2;
     }
 
+    Trace trace(src);
+
+    trace.begin_phase("lex");
     Lexer lexer(src);
     std::vector<Token> tokens = lexer.tokenise();
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        const Token& t = tokens[i];
+        std::ostringstream o;
+        o << "\"kind\":\"token\",\"tclass\":" << q(tok_name(t.kind))
+          << ",\"lexeme\":" << q(t.lexeme);
+        trace.event(static_cast<int>(i), o.str(), t.span);
+    }
+    for (const Diagnostic& d : lexer.diagnostics()) trace.diagnostic(d);
+    trace.end_phase(!lexer.failed());
 
     if (dump_tokens) {
         for (const Token& t : tokens) {
@@ -155,21 +256,26 @@ int main(int argc, char** argv) {
                         t.lexeme.c_str());
         }
     }
-
     for (const Diagnostic& d : lexer.diagnostics()) report(src, d);
 
+    trace.begin_phase("parse");
     Parser parser(src, tokens);
     TranslationUnit tu = parser.parse();
+    for (const auto& d : tu.decls) trace_decl(trace, d.get());
+    for (const Diagnostic& d : parser.diagnostics()) trace.diagnostic(d);
+    trace.end_phase(!parser.failed());
 
     if (dump_ast) {
         for (const auto& d : tu.decls) dump_decl(d.get(), 0);
     }
-
     for (const Diagnostic& d : parser.diagnostics()) report(src, d);
 
     if (!trace_path.empty()) {
-        std::cerr << "cviz: trace emission is not implemented yet\n";
+        if (!trace.write(trace_path)) {
+            std::cerr << "cviz: cannot write " << trace_path << "\n";
+            return 2;
+        }
     }
 
-    return (lexer.failed() || parser.failed()) ? 1 : 0;
-}
+    return (lexer.failed() || parser.failed()) ? 1 : 0;   
+} 
