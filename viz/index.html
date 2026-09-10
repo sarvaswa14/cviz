@@ -5,65 +5,74 @@
 <title>cviz — compilation trace</title>
 <style>
   :root {
-    --bg: #fbfbfa; --panel: #fff; --line: #d7dbe0; --ink: #1e2530;
-    --muted: #6b7480; --accent: #2e4257; --hl: #dde3ea;
+    --bg:#fbfbfa; --panel:#fff; --line:#d7dbe0; --ink:#1e2530;
+    --muted:#6b7480; --accent:#2e4257; --hl:#dde3ea; --mark:#ffe9a8;
+    --kw:#2e4257; --num:#8a5a1e; --str:#3f6b3f; --punc:#7a828c; --id:#1e2530;
+    --err:#a3342c;
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
-  }
-  header {
-    padding: 14px 20px; border-bottom: 1px solid var(--line);
-    display: flex; align-items: baseline; gap: 16px; background: var(--panel);
-  }
-  h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .02em; }
-  #file { color: var(--muted); font-size: 13px; }
-  #load { margin-left: auto; font-size: 13px; }
-  nav {
-    display: flex; gap: 2px; padding: 0 20px;
-    border-bottom: 1px solid var(--line); background: var(--panel);
-  }
-  nav button {
-    border: 1px solid transparent; border-bottom: none; background: none;
-    padding: 8px 14px; font: inherit; font-size: 13px; color: var(--muted);
-    cursor: pointer; border-radius: 4px 4px 0 0;
-  }
-  nav button.on {
-    background: var(--bg); color: var(--accent); font-weight: 600;
-    border-color: var(--line);
-  }
-  nav button:disabled { opacity: .35; cursor: default; }
-  main { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 18px 20px; }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
-  .head {
-    padding: 7px 12px; border-bottom: 1px solid var(--line);
-    font-size: 12px; color: var(--muted); text-transform: lowercase;
-  }
-  .body { padding: 10px 12px; overflow: auto; max-height: 68vh; }
-  pre { margin: 0; font: 12.5px/1.65 "Cascadia Mono", Consolas, monospace; }
-  .srcline { display: block; padding: 0 4px; border-radius: 2px; }
-  .srcline .no {
-    display: inline-block; width: 2.4em; color: var(--muted);
-    text-align: right; margin-right: 12px; user-select: none;
-  }
-  .srcline.on { background: var(--hl); }
-  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
-  td { padding: 2px 8px 2px 0; vertical-align: top; }
-  tr.row { cursor: pointer; }
-  tr.row:hover td { background: #f1f3f6; }
-  tr.row.on td { background: var(--hl); }
-  .pos { color: var(--muted); font-family: Consolas, monospace; white-space: nowrap; }
-  .cls { color: var(--accent); font-family: Consolas, monospace; }
-  .lex { font-family: Consolas, monospace; }
-  .tree { font: 12.5px/1.7 Consolas, monospace; }
-  .node { cursor: pointer; padding: 0 3px; border-radius: 2px; display: inline-block; }
-  .node:hover { background: #f1f3f6; }
-  .node.on { background: var(--hl); }
-  .kind { color: var(--accent); }
-  .label { color: var(--ink); }
-  .diag { color: #a33; font-size: 12.5px; margin-bottom: 6px; }
-  .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:14px/1.5 "Segoe UI", system-ui, sans-serif; }
+  header { padding:12px 20px; border-bottom:1px solid var(--line);
+           display:flex; align-items:baseline; gap:16px; background:var(--panel); }
+  h1 { font-size:15px; margin:0; font-weight:600; letter-spacing:.03em; }
+  #file { color:var(--muted); font-size:13px; }
+  #stats { color:var(--muted); font-size:12px; margin-left:auto;
+           font-family:Consolas,monospace; }
+  #load { font-size:13px; }
+  nav { display:flex; gap:2px; padding:0 20px; background:var(--panel);
+        border-bottom:1px solid var(--line); }
+  nav button { border:1px solid transparent; border-bottom:none; background:none;
+    padding:8px 14px; font:inherit; font-size:13px; color:var(--muted);
+    cursor:pointer; border-radius:4px 4px 0 0; }
+  nav button.on { background:var(--bg); color:var(--accent); font-weight:600;
+                  border-color:var(--line); }
+  nav button:disabled { opacity:.35; cursor:default; }
+  main { display:grid; grid-template-columns:1fr 1fr; gap:18px; padding:18px 20px; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:4px;
+            display:flex; flex-direction:column; min-height:0; }
+  .head { padding:6px 12px; border-bottom:1px solid var(--line); font-size:12px;
+          color:var(--muted); display:flex; align-items:center; gap:10px; }
+  .head .tools { margin-left:auto; display:flex; gap:6px; }
+  .head button { font:inherit; font-size:11px; padding:2px 8px; cursor:pointer;
+                 border:1px solid var(--line); background:var(--panel);
+                 border-radius:3px; color:var(--muted); }
+  .head button:hover { background:var(--bg); }
+  .head input { font:inherit; font-size:12px; padding:2px 6px; width:130px;
+                border:1px solid var(--line); border-radius:3px; }
+  .body { padding:10px 12px; overflow:auto; max-height:70vh; }
+  pre { margin:0; font:12.5px/1.7 "Cascadia Mono", Consolas, monospace; }
+  .srcline { display:block; padding:0 4px; border-radius:2px; cursor:pointer; }
+  .srcline .no { display:inline-block; width:2.4em; color:var(--muted);
+                 text-align:right; margin-right:12px; user-select:none; }
+  .srcline:hover { background:#f4f6f8; }
+  .srcline.on { background:var(--hl); }
+  mark { background:var(--mark); padding:1px 0; border-radius:2px; }
+  .kw{color:var(--kw);font-weight:600}.num{color:var(--num)}.str{color:var(--str)}
+  .punc{color:var(--punc)}.id{color:var(--id)}
+  table { border-collapse:collapse; width:100%; font-size:12.5px; }
+  td { padding:2px 8px 2px 0; vertical-align:top; }
+  tr.row { cursor:pointer; }
+  tr.row:hover td { background:#f4f6f8; }
+  tr.row.on td { background:var(--hl); }
+  tr.row.rel td { background:#f0f4e8; }
+  .pos { color:var(--muted); font-family:Consolas,monospace; white-space:nowrap; }
+  .cls { color:var(--accent); font-family:Consolas,monospace; }
+  .lex { font-family:Consolas,monospace; }
+  .tree { font:12.5px/1.75 Consolas, monospace; }
+  .tw { display:flex; align-items:flex-start; }
+  .tog { width:14px; flex:0 0 14px; color:var(--muted); cursor:pointer;
+         user-select:none; text-align:center; }
+  .node { cursor:pointer; padding:0 3px; border-radius:2px; }
+  .node:hover { background:#f4f6f8; }
+  .node.on { background:var(--hl); }
+  .node.rel { background:#f0f4e8; }
+  .kind { color:var(--accent); }
+  .label { color:var(--ink); }
+  .kids.hid { display:none; }
+  .diag { color:var(--err); font-size:12.5px; margin-bottom:5px; cursor:pointer;
+          font-family:Consolas,monospace; }
+  .empty { color:var(--muted); font-size:13px; padding:8px 0; }
 </style>
 </head>
 <body>
@@ -72,29 +81,34 @@
   <h1>cviz</h1>
   <span id="file">no trace loaded</span>
   <input type="file" id="load" accept=".json">
+  <span id="stats"></span>
 </header>
 
 <nav id="tabs"></nav>
 
 <main>
   <section>
-    <div class="head">source</div>
+    <div class="head">source
+      <span class="tools"><button id="clearsel">clear selection</button></span>
+    </div>
     <div class="body"><pre id="src"></pre></div>
   </section>
   <section>
-    <div class="head" id="panelhead">phase output</div>
+    <div class="head"><span id="panelhead">phase output</span>
+      <span class="tools" id="paneltools"></span>
+    </div>
     <div class="body" id="out"><div class="empty">Load a trace file to begin.</div></div>
   </section>
 </main>
 
 <script>
 const PHASES = [
-  ["preprocess", "Preprocessor"], ["lex", "Tokens"], ["parse", "Syntax tree"],
-  ["sem", "Symbols"], ["ir", "IR"], ["cfg", "Control flow"],
-  ["opt", "Optimised"], ["codegen", "Assembly"]
+  ["preprocess","Preprocessor"], ["lex","Tokens"], ["parse","Syntax tree"],
+  ["sem","Symbols"], ["ir","IR"], ["cfg","Control flow"],
+  ["opt","Optimised"], ["codegen","Assembly"]
 ];
 
-let trace = null, active = null;
+let trace=null, active=null, tokensByLine={};
 
 document.getElementById("load").addEventListener("change", ev => {
   const f = ev.target.files[0];
@@ -102,48 +116,112 @@ document.getElementById("load").addEventListener("change", ev => {
   const r = new FileReader();
   r.onload = () => {
     try { load(JSON.parse(r.result)); }
-    catch (e) { alert("Could not parse trace: " + e.message); }
+    catch(e) { alert("Could not parse trace: " + e.message); }
   };
   r.readAsText(f);
 });
 
+document.getElementById("clearsel").onclick = clearAll;
+
 function load(t) {
   trace = t;
   document.getElementById("file").textContent = t.source.file;
+  indexTokens();
   renderSource();
   buildTabs();
+  renderStats();
   const first = PHASES.find(p => phase(p[0]));
   if (first) select(first[0]);
 }
 
-function phase(name) {
-  return trace ? trace.phases.find(p => p.phase === name) : null;
+function phase(n) { return trace ? trace.phases.find(p => p.phase === n) : null; }
+
+// Syntax highlighting is driven by the compiler's own token stream, not by
+// a regular expression, so what is shown is what the lexer actually produced.
+function indexTokens() {
+  tokensByLine = {};
+  const lex = phase("lex");
+  if (!lex) return;
+  lex.events.forEach(e => {
+    if (!e.span || !e.span.line || !e.span.len) return;
+    (tokensByLine[e.span.line] ||= []).push(e);
+  });
+  for (const k in tokensByLine) tokensByLine[k].sort((a,b) => a.span.col - b.span.col);
+}
+
+function tokClass(tc) {
+  if (tc.startsWith("KW_")) return "kw";
+  if (tc === "IDENT") return "id";
+  if (tc === "INT_LIT" || tc === "CHAR_LIT" || tc === "FLOAT_LIT") return "num";
+  if (tc === "STRING_LIT") return "str";
+  return "punc";
 }
 
 function renderSource() {
   const el = document.getElementById("src");
   el.innerHTML = "";
-  trace.source.lines.forEach((line, i) => {
+  trace.source.lines.forEach((line,i) => {
     const s = document.createElement("span");
     s.className = "srcline";
-    s.dataset.line = i + 1;
-    s.innerHTML = '<span class="no">' + (i + 1) + "</span>";
-    s.appendChild(document.createTextNode(line));
+    s.dataset.line = i+1;
+    s.innerHTML = lineHtml(i+1, line, null);
+    s.onclick = () => selectLine(i+1);
     el.appendChild(s);
   });
+}
+
+function lineHtml(no, text, hl) {
+  let out = '<span class="no">' + no + "</span>";
+  const toks = tokensByLine[no] || [];
+  let col = 1;
+  const emit = (str, startCol, cls) => {
+    if (!str) return;
+    let html = escapeHtml(str);
+    if (hl && hl.line === no && hl.len > 0) {
+      const a = hl.col, b = hl.col + hl.len;
+      const s = startCol, e = startCol + str.length;
+      if (a < e && b > s) {
+        const from = Math.max(a,s) - s, to = Math.min(b,e) - s;
+        html = escapeHtml(str.slice(0,from)) + "<mark>" +
+               escapeHtml(str.slice(from,to)) + "</mark>" +
+               escapeHtml(str.slice(to));
+      }
+    }
+    out += cls ? '<span class="' + cls + '">' + html + "</span>" : html;
+  };
+  toks.forEach(t => {
+    if (t.span.col > col) emit(text.slice(col-1, t.span.col-1), col, null);
+    const lex = text.slice(t.span.col-1, t.span.col-1+t.span.len);
+    emit(lex, t.span.col, tokClass(t.tclass));
+    col = t.span.col + t.span.len;
+  });
+  if (col <= text.length) emit(text.slice(col-1), col, null);
+  return out;
 }
 
 function buildTabs() {
   const nav = document.getElementById("tabs");
   nav.innerHTML = "";
-  PHASES.forEach(([id, title]) => {
+  PHASES.forEach(([id,title]) => {
     const b = document.createElement("button");
     b.textContent = title;
     b.disabled = !phase(id);
-    b.onclick = () => select(id);
     b.dataset.phase = id;
+    b.onclick = () => select(id);
     nav.appendChild(b);
   });
+}
+
+function renderStats() {
+  const lex = phase("lex"), par = phase("parse");
+  const bits = [];
+  if (lex) bits.push(lex.events.length + " tokens");
+  if (par) bits.push(par.events.length + " nodes");
+  const dg = trace.phases.reduce((n,p) => n + p.diagnostics.length, 0);
+  bits.push(dg + (dg === 1 ? " diagnostic" : " diagnostics"));
+  const bad = trace.phases.filter(p => p.status !== "ok").map(p => p.phase);
+  bits.push(bad.length ? "failed: " + bad.join(", ") : "all phases ok");
+  document.getElementById("stats").textContent = bits.join("   ·   ");
 }
 
 function select(id) {
@@ -153,6 +231,9 @@ function select(id) {
   const p = phase(id);
   document.getElementById("panelhead").textContent =
     p ? p.phase + " — " + p.status : "phase output";
+
+  const tools = document.getElementById("paneltools");
+  tools.innerHTML = "";
   const out = document.getElementById("out");
   out.innerHTML = "";
   if (!p) { out.innerHTML = '<div class="empty">Phase not present.</div>'; return; }
@@ -160,60 +241,98 @@ function select(id) {
   p.diagnostics.forEach(d => {
     const div = document.createElement("div");
     div.className = "diag";
-    div.textContent = d.span.line + ":" + d.span.col + "  " +
-                      d.message + "  [" + d.code + "]";
+    div.textContent = d.span.line + ":" + d.span.col + "  " + d.message +
+                      "  [" + d.code + "]";
     div.onclick = () => highlight(d.span);
     out.appendChild(div);
   });
 
-  if (id === "lex") renderTokens(p, out);
-  else if (id === "parse") renderTree(p, out);
-  else out.appendChild(rawList(p));
+  if (id === "lex")        renderTokens(p, out, tools);
+  else if (id === "parse") renderTree(p, out, tools);
+  else                     out.appendChild(rawList(p));
 }
 
-function renderTokens(p, out) {
+function renderTokens(p, out, tools) {
+  const filter = document.createElement("input");
+  filter.placeholder = "filter";
+  tools.appendChild(filter);
+
   const t = document.createElement("table");
   p.events.forEach(e => {
     const tr = document.createElement("tr");
     tr.className = "row";
+    tr.dataset.line = e.span ? e.span.line : 0;
+    tr.dataset.key  = ((e.tclass||"") + " " + (e.lexeme||"")).toLowerCase();
     tr.innerHTML =
       '<td class="pos">' + (e.span ? e.span.line + ":" + e.span.col : "") + "</td>" +
       '<td class="cls">' + e.tclass + "</td>" +
       '<td class="lex">' + escapeHtml(e.lexeme || "") + "</td>";
-    tr.onclick = () => { markRow(tr); highlight(e.span); };
+    tr.onclick = () => { markOne(tr, "tr.row"); highlight(e.span); };
     t.appendChild(tr);
   });
   out.appendChild(t);
+
+  filter.oninput = () => {
+    const q = filter.value.trim().toLowerCase();
+    t.querySelectorAll("tr.row").forEach(tr =>
+      tr.style.display = (!q || tr.dataset.key.includes(q)) ? "" : "none");
+  };
 }
 
-function renderTree(p, out) {
+function renderTree(p, out, tools) {
   const byId = {};
   p.events.forEach(e => byId[e.id] = e);
   const roots = p.events.filter(e => e.root);
+
+  const ex = document.createElement("button"); ex.textContent = "expand all";
+  const co = document.createElement("button"); co.textContent = "collapse all";
+  tools.appendChild(ex); tools.appendChild(co);
+
   const box = document.createElement("div");
   box.className = "tree";
   roots.forEach(r => box.appendChild(treeNode(r, byId, 0)));
   if (!roots.length) box.innerHTML = '<div class="empty">No declarations parsed.</div>';
   out.appendChild(box);
+
+  ex.onclick = () => box.querySelectorAll(".kids").forEach(k => {
+    k.classList.remove("hid"); k.previousSibling.querySelector(".tog").textContent = "\u25be"; });
+  co.onclick = () => box.querySelectorAll(".kids").forEach(k => {
+    k.classList.add("hid"); k.previousSibling.querySelector(".tog").textContent = "\u25b8"; });
 }
 
 function treeNode(e, byId, depth) {
   const wrap = document.createElement("div");
-  const line = document.createElement("div");
-  line.style.paddingLeft = (depth * 18) + "px";
+  const kids = (e.children || []).map(c => byId[c]).filter(Boolean);
+
+  const row = document.createElement("div");
+  row.className = "tw";
+  row.style.paddingLeft = (depth * 16) + "px";
+
+  const tog = document.createElement("span");
+  tog.className = "tog";
+  tog.textContent = kids.length ? "\u25be" : "";
+  row.appendChild(tog);
 
   const n = document.createElement("span");
   n.className = "node";
+  n.dataset.line = e.span ? e.span.line : 0;
   n.innerHTML = '<span class="kind">' + e.node + "</span>" +
                 (e.label ? ' <span class="label">' + escapeHtml(e.label) + "</span>" : "");
-  n.onclick = ev => { ev.stopPropagation(); markNode(n); highlight(e.span); };
-  line.appendChild(n);
-  wrap.appendChild(line);
+  n.onclick = ev => { ev.stopPropagation(); markOne(n, ".node"); highlight(e.span); };
+  row.appendChild(n);
+  wrap.appendChild(row);
 
-  (e.children || []).forEach(cid => {
-    const c = byId[cid];
-    if (c) wrap.appendChild(treeNode(c, byId, depth + 1));
-  });
+  if (kids.length) {
+    const box = document.createElement("div");
+    box.className = "kids";
+    kids.forEach(c => box.appendChild(treeNode(c, byId, depth + 1)));
+    wrap.appendChild(box);
+    tog.onclick = ev => {
+      ev.stopPropagation();
+      const hid = box.classList.toggle("hid");
+      tog.textContent = hid ? "\u25b8" : "\u25be";
+    };
+  }
   return wrap;
 }
 
@@ -223,25 +342,51 @@ function rawList(p) {
   return pre;
 }
 
-function markRow(tr) {
-  document.querySelectorAll("tr.row.on").forEach(x => x.classList.remove("on"));
-  tr.classList.add("on");
+function markOne(el, sel) {
+  document.querySelectorAll(sel + ".on").forEach(x => x.classList.remove("on"));
+  el.classList.add("on");
 }
 
-function markNode(n) {
-  document.querySelectorAll(".node.on").forEach(x => x.classList.remove("on"));
-  n.classList.add("on");
+// Selecting a source line marks every artefact of the active phase that
+// originated on it, which is the provenance link read backwards.
+function selectLine(no) {
+  document.querySelectorAll(".srcline.on").forEach(x => x.classList.remove("on"));
+  const el = document.querySelector('.srcline[data-line="' + no + '"]');
+  if (el) el.classList.add("on");
+
+  document.querySelectorAll(".rel").forEach(x => x.classList.remove("rel"));
+  let first = null;
+  document.querySelectorAll('#out [data-line="' + no + '"]').forEach(x => {
+    x.classList.add("rel");
+    if (!first) first = x;
+  });
+  if (first) first.scrollIntoView({block:"center"});
 }
 
 function highlight(span) {
-  document.querySelectorAll(".srcline.on").forEach(x => x.classList.remove("on"));
+  document.querySelectorAll(".srcline").forEach(x => x.classList.remove("on"));
   if (!span || !span.line) return;
   const el = document.querySelector('.srcline[data-line="' + span.line + '"]');
-  if (el) { el.classList.add("on"); el.scrollIntoView({block: "center"}); }
+  if (!el) return;
+  const text = trace.source.lines[span.line - 1] || "";
+  document.querySelectorAll(".srcline mark").forEach(m => {
+    const p = m.closest(".srcline");
+    const n = +p.dataset.line;
+    p.innerHTML = lineHtml(n, trace.source.lines[n-1] || "", null);
+  });
+  el.innerHTML = lineHtml(span.line, text, span);
+  el.classList.add("on");
+  el.onclick = () => selectLine(span.line);
+  el.scrollIntoView({block:"center"});
+}
+
+function clearAll() {
+  document.querySelectorAll(".on, .rel").forEach(x => x.classList.remove("on","rel"));
+  if (trace) renderSource();
 }
 
 function escapeHtml(s) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 </script>
 </body>
