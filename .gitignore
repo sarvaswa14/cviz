@@ -1,0 +1,13 @@
+# build artefacts
+build/
+*.o
+*.exe
+*.s
+
+# traces produced by runs
+*.trace.json
+out/
+
+# editor
+.vscode/
+*.swp
