@@ -73,6 +73,10 @@
   .diag { color:var(--err); font-size:12.5px; margin-bottom:5px; cursor:pointer;
           font-family:Consolas,monospace; }
   .empty { color:var(--muted); font-size:13px; padding:8px 0; }
+  .scopehdr { color:var(--accent); font-weight:600; margin-top:5px; }
+  .scopeid { color:var(--muted); font-weight:400; }
+  .scopeend { color:var(--muted); font-style:italic; font-size:11.5px; }
+  .ty { color:var(--num); }
 </style>
 </head>
 <body>
@@ -249,6 +253,7 @@ function select(id) {
 
   if (id === "lex")        renderTokens(p, out, tools);
   else if (id === "parse") renderTree(p, out, tools);
+  else if (id === "sem")   renderSymbols(p, out);
   else                     out.appendChild(rawList(p));
 }
 
@@ -334,6 +339,61 @@ function treeNode(e, byId, depth) {
     };
   }
   return wrap;
+}
+
+// Scopes are replayed in the order the analyser opened and closed them, so
+// the nesting shown is the nesting the compiler actually maintained.
+function renderSymbols(p, out) {
+  const stack = [];
+  const rows = [];
+
+  p.events.forEach(e => {
+    if (e.kind === "scope_open") {
+      stack.push(e.scope);
+      rows.push({ type:"open", depth: stack.length - 1, scope: e.scope, of: e.of });
+    } else if (e.kind === "scope_close") {
+      rows.push({ type:"close", depth: Math.max(0, stack.length - 1) });
+      stack.pop();
+    } else if (e.kind === "symbol") {
+      rows.push({ type:"sym", depth: stack.length,
+                  name: e.name, vtype: e.type, span: e.span });
+    }
+  });
+
+  const box = document.createElement("div");
+  box.className = "tree";
+
+  rows.forEach(r => {
+    const div = document.createElement("div");
+    div.style.paddingLeft = (r.depth * 18) + "px";
+
+    if (r.type === "open") {
+      div.className = "scopehdr";
+      div.innerHTML = r.of + " scope <span class=\"scopeid\">#" + r.scope + "</span>";
+    } else if (r.type === "close") {
+      div.innerHTML = '<span class="scopeend">end scope</span>';
+    } else {
+      const s = document.createElement("span");
+      s.className = "node";
+      s.dataset.line = r.span ? r.span.line : 0;
+      s.innerHTML = escapeHtml(r.name) +
+                    ' <span class="ty">: ' + escapeHtml(r.vtype) + "</span>";
+      s.onclick = ev => { ev.stopPropagation(); markOne(s, ".node"); highlight(r.span); };
+      div.appendChild(s);
+    }
+    box.appendChild(div);
+  });
+
+  if (!rows.length) box.innerHTML = '<div class="empty">No symbols recorded.</div>';
+
+  const types = p.events.filter(e => e.kind === "type").length;
+  const note = document.createElement("div");
+  note.className = "empty";
+  note.textContent = types + " expression node" + (types === 1 ? "" : "s") +
+                     " assigned a type.";
+  box.appendChild(note);
+
+  out.appendChild(box);
 }
 
 function rawList(p) {
