@@ -1,7 +1,8 @@
 #include "trace.h"
+#include <cstdio>
 #include <fstream>
 #include <sstream>
-#include <cstdio>
+
 namespace cviz {
 
 Trace::Trace(const Source& src) : src_(src) {}
@@ -31,8 +32,7 @@ std::string Trace::escape(const std::string& s) {
 
 std::string Trace::span_json(const Span& s) {
     std::ostringstream o;
-    o << "{\"line\":" << s.line << ",\"col\":" << s.col
-      << ",\"len\":" << s.len << "}";
+    o << "{\"line\":" << s.line << ",\"col\":" << s.col << ",\"len\":" << s.len << "}";
     return o.str();
 }
 
@@ -74,7 +74,7 @@ bool Trace::write(const std::string& path) const {
     std::ofstream out(path, std::ios::binary);
     if (!out) return false;
 
-    out << "{\n  \"version\": 1,\n";
+    out << "{\n  \"version\": 2,\n";
     out << "  \"source\": {\n";
     out << "    \"file\": \"" << escape(src_.file) << "\",\n";
     out << "    \"lines\": [";
@@ -90,7 +90,6 @@ bool Trace::write(const std::string& path) const {
         out << "    {\n";
         out << "      \"phase\": \"" << ph.name << "\",\n";
         out << "      \"status\": \"" << (ph.ok ? "ok" : "error") << "\",\n";
-
         out << "      \"events\": [\n";
         for (size_t i = 0; i < ph.events.size(); ++i) {
             out << "        " << ph.events[i];
@@ -98,7 +97,6 @@ bool Trace::write(const std::string& path) const {
             out << "\n";
         }
         out << "      ],\n";
-
         out << "      \"diagnostics\": [\n";
         for (size_t i = 0; i < ph.diags.size(); ++i) {
             out << "        " << ph.diags[i];
@@ -106,7 +104,6 @@ bool Trace::write(const std::string& path) const {
             out << "\n";
         }
         out << "      ]\n";
-
         out << "    }";
         if (p + 1 < phases_.size()) out << ",";
         out << "\n";

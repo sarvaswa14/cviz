@@ -15,15 +15,8 @@ using ExprPtr = std::unique_ptr<Expr>;
 using StmtPtr = std::unique_ptr<Stmt>;
 using DeclPtr = std::unique_ptr<Decl>;
 
-// Every node carries an id, unique within the parse phase. The trace uses
-// it for provenance: an IR instruction names the node id it came from.
-// See spec/trace-format.md, "Provenance".
+// Unique within the parse phase; used for trace provenance.
 using NodeId = int;
-
-// The type a declarator denotes, built inside-out as the declarator is
-// read outside-in (spec/grammar.md section 3). Kept structural rather
-// than as a field on the AST, because semantic analysis and code
-// generation both consult it independently.
 
 struct Type;
 using TypePtr = std::shared_ptr<Type>;
@@ -31,14 +24,17 @@ using TypePtr = std::shared_ptr<Type>;
 enum class TypeKind { Void, Char, Short, Int, Long, Float, Double, Bool,
                       Pointer, Array, Function, Struct };
 
+// Types are recursive: pointer-to, array-of and function-returning wrap a
+// base type. Shared because many nodes refer to the same type object.
 struct Type {
     TypeKind kind = TypeKind::Int;
     bool     is_unsigned = false;
+    bool     variadic = false;       // Function: accepts extra arguments
 
-    TypePtr  base;                  // Pointer: pointee. Array/Function: element/return.
-    long long array_len = -1;       // Array: -1 when unsized, as in int a[].
-    std::vector<TypePtr> params;    // Function: parameter types.
-    std::string tag;                // Struct: the tag name, may be empty.
+    TypePtr  base;
+    long long array_len = -1;
+    std::vector<TypePtr> params;
+    std::string tag;
 
     static TypePtr make(TypeKind k, bool uns = false);
     static TypePtr pointer_to(TypePtr b);
@@ -48,55 +44,34 @@ struct Type {
     std::string to_string() const;
 };
 
-
 enum class ExprKind {
     IntLit, CharLit, StringLit, FloatLit, Ident,
-    Unary,        // op applied to operand
-    Binary,       // lhs op rhs
-    Assign,       // lhs op= rhs, op == Tok::Assign for plain assignment
-    Conditional,  // cond ? then_expr : else_expr
-    Call,         // callee(args)
-    Index,        // base[index]
-    Member,       // base.name  or  base->name
-    Cast,         // (type)operand
-    SizeofExpr,   // sizeof operand
-    SizeofType,   // sizeof(type)
-    PostIncDec,   // operand++ or operand--
-    PreIncDec,    // ++operand or --operand
-    Comma,        // lhs, rhs
+    Unary, Binary, Assign, Conditional, Call, Index, Member,
+    Cast, SizeofExpr, SizeofType, PostIncDec, PreIncDec, Comma,
 };
 
 struct Expr {
     ExprKind kind;
     NodeId   id   = 0;
     Span     span;
+    TypePtr  type;              // filled by semantic analysis
 
-    // Filled by semantic analysis, not by the parser.
-    TypePtr  type;
-
-    // literals and identifiers
     long long   int_value = 0;
-    std::string text;              // identifier name, string literal body
+    std::string text;
 
-    // operators
-    Tok      op = Tok::Error;      // Unary, Binary, Assign, Pre/PostIncDec
-    bool     arrow = false;        // Member: true for ->, false for .
+    Tok      op = Tok::Error;
+    bool     arrow = false;
 
-    ExprPtr  lhs;                  // Binary/Assign lhs, Unary operand,
-                                   // Call callee, Index base, Member base,
-                                   // Cast operand, sizeof operand
-    ExprPtr  rhs;                  // Binary/Assign rhs, Index subscript
-    ExprPtr  third;                // Conditional else branch
+    ExprPtr  lhs;
+    ExprPtr  rhs;
+    ExprPtr  third;
 
-    std::vector<ExprPtr> args;     // Call arguments
-    TypePtr  cast_type;            // Cast target, SizeofType operand
+    std::vector<ExprPtr> args;
+    TypePtr  cast_type;
 
-    // A short label for the trace, e.g. "+" for a Binary, the name for an
-    // Ident, the literal text for a constant.
     std::string label() const;
     const char* kind_name() const;
 };
-
 
 enum class StmtKind {
     Compound, ExprStmt, If, While, DoWhile, For, Switch,
@@ -108,24 +83,20 @@ struct Stmt {
     NodeId   id = 0;
     Span     span;
 
-    ExprPtr  expr;                 // ExprStmt, If/While/Switch condition,
-                                   // Return value, Case constant
-    ExprPtr  init_expr;            // For: initialiser
-    ExprPtr  cond_expr;            // For: condition
-    ExprPtr  step_expr;            // For: step
+    ExprPtr  expr;
+    ExprPtr  init_expr;
+    ExprPtr  cond_expr;
+    ExprPtr  step_expr;
 
-    StmtPtr  body;                 // If then-branch, loop body, Case body
-    StmtPtr  else_body;            // If else-branch
+    StmtPtr  body;
+    StmtPtr  else_body;
 
-    std::vector<StmtPtr> items;    // Compound: declarations and statements
-    DeclPtr  decl;                 // DeclStmt
+    std::vector<StmtPtr> items;
+    DeclPtr  decl;
 
     const char* kind_name() const;
 };
 
-
-// One declarator from a declaration: a name, the type it denotes, and an
-// optional initialiser. `int *a, b[4];` produces two of these.
 struct Declarator {
     std::string name;
     TypePtr     type;
@@ -140,21 +111,18 @@ struct Decl {
     NodeId   id = 0;
     Span     span;
 
-    std::vector<Declarator> declarators;   // Variable
+    std::vector<Declarator> declarators;
 
-    // Function definition
     std::string              func_name;
     TypePtr                  func_type;
     std::vector<std::string> param_names;
     StmtPtr                  body;
 
-    // StructDef
     std::string tag;
     std::vector<Declarator> members;
 
     const char* kind_name() const;
 };
-
 
 struct TranslationUnit {
     std::vector<DeclPtr> decls;

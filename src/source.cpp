@@ -10,6 +10,7 @@ const char* to_string(DiagClass c) {
         case DiagClass::Lexical:  return "lexical";
         case DiagClass::Syntax:   return "syntax";
         case DiagClass::Semantic: return "semantic";
+        case DiagClass::Lowering: return "lowering";
     }
     return "unknown";
 }
@@ -19,11 +20,11 @@ static std::vector<std::string> split_lines(const std::string& text) {
     std::string cur;
     for (size_t i = 0; i < text.size(); ++i) {
         char c = text[i];
-        if (c == '\r') continue;         
+        if (c == '\r') continue;
         if (c == '\n') { out.push_back(cur); cur.clear(); }
         else           { cur.push_back(c); }
     }
-    out.push_back(cur);                 
+    out.push_back(cur);
     return out;
 }
 
@@ -43,4 +44,4 @@ Source Source::from_file(const std::string& path) {
     return from_text(ss.str(), path);
 }
 
-}  
+}  // namespace cviz

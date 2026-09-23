@@ -41,7 +41,8 @@ void Parser::fatal(const std::string& code, const std::string& msg, Span s) {
     throw ParseError{};
 }
 
-// Panic-mode recovery, as specified in spec/grammar.md section 7.
+// Panic-mode recovery: discard tokens up to a statement or declaration
+// boundary, as specified in spec/grammar.md section 7.
 void Parser::sync() {
     while (!check(Tok::EndOfFile)) {
         if (previous().kind == Tok::Semi) return;
@@ -61,25 +62,19 @@ void Parser::sync() {
 
 ExprPtr Parser::new_expr(ExprKind k, Span s) {
     auto e = std::make_unique<Expr>();
-    e->kind = k;
-    e->id   = next_id_++;
-    e->span = s;
+    e->kind = k; e->id = next_id_++; e->span = s;
     return e;
 }
 
 StmtPtr Parser::new_stmt(StmtKind k, Span s) {
     auto st = std::make_unique<Stmt>();
-    st->kind = k;
-    st->id   = next_id_++;
-    st->span = s;
+    st->kind = k; st->id = next_id_++; st->span = s;
     return st;
 }
 
 DeclPtr Parser::new_decl(DeclKind k, Span s) {
     auto d = std::make_unique<Decl>();
-    d->kind = k;
-    d->id   = next_id_++;
-    d->span = s;
+    d->kind = k; d->id = next_id_++; d->span = s;
     return d;
 }
 
@@ -200,8 +195,8 @@ TypePtr Parser::parse_declarator(TypePtr base, std::string& name) {
 }
 
 // The declarator is read outside-in while the type is built inside-out.
-// A parenthesised declarator is handled by parsing the suffixes that
-// follow the group first, then re-reading the group against that type.
+// A parenthesised declarator is handled by parsing the suffixes that follow
+// the group first, then re-reading the group against that type.
 TypePtr Parser::parse_direct_declarator(TypePtr base, std::string& name) {
     if (check(Tok::LParen) && starts_declarator(pos_ + 1)) {
         size_t inner = pos_ + 1;
@@ -380,16 +375,15 @@ StmtPtr Parser::parse_compound() {
 StmtPtr Parser::parse_statement() {
     Span s = peek().span;
     switch (peek().kind) {
-        case Tok::LBrace:  return parse_compound();
-        case Tok::KwIf:    return parse_if();
-        case Tok::KwWhile: return parse_while();
-        case Tok::KwDo:    return parse_do_while();
-        case Tok::KwFor:   return parse_for();
-        case Tok::KwSwitch:return parse_switch();
+        case Tok::LBrace:   return parse_compound();
+        case Tok::KwIf:     return parse_if();
+        case Tok::KwWhile:  return parse_while();
+        case Tok::KwDo:     return parse_do_while();
+        case Tok::KwFor:    return parse_for();
+        case Tok::KwSwitch: return parse_switch();
 
         case Tok::KwGoto:
-            fatal("not-in-subset",
-                  "'goto' is not in the supported subset", s);
+            fatal("not-in-subset", "'goto' is not in the supported subset", s);
 
         case Tok::KwCase: {
             advance();
@@ -436,8 +430,7 @@ StmtPtr Parser::parse_statement() {
     }
 }
 
-// On seeing 'else', bind it immediately, which attaches it to the nearest
-// unmatched 'if' (spec/grammar.md section 4).
+// Binding 'else' immediately attaches it to the nearest unmatched 'if'.
 StmtPtr Parser::parse_if() {
     Span s = peek().span;
     advance();
@@ -570,8 +563,8 @@ ExprPtr Parser::parse_conditional() {
     return cond;
 }
 
-// Precedence climbing over the table above, which replaces one function
-// per level (spec/grammar.md section 5).
+// Precedence climbing: one function and one table replace a function per
+// precedence level. Recursing with prec + 1 makes operators left-associative.
 ExprPtr Parser::parse_binary(int min_prec) {
     ExprPtr lhs = parse_cast();
     for (;;) {
@@ -588,8 +581,8 @@ ExprPtr Parser::parse_binary(int min_prec) {
     }
 }
 
-// '(' begins either a cast or a parenthesised expression; the token after
-// it decides which.
+// '(' begins either a cast or a parenthesised expression; the token after it
+// decides which.
 ExprPtr Parser::parse_cast() {
     if (check(Tok::LParen) && is_type_start(1)) {
         Span s = peek().span;

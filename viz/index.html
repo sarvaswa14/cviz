@@ -8,7 +8,7 @@
     --bg:#fbfbfa; --panel:#fff; --line:#d7dbe0; --ink:#1e2530;
     --muted:#6b7480; --accent:#2e4257; --hl:#dde3ea; --mark:#ffe9a8;
     --kw:#2e4257; --num:#8a5a1e; --str:#3f6b3f; --punc:#7a828c; --id:#1e2530;
-    --err:#a3342c;
+    --err:#a3342c; --ok:#2e5e3e;
   }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--ink);
@@ -17,16 +17,13 @@
            display:flex; align-items:baseline; gap:16px; background:var(--panel); }
   h1 { font-size:15px; margin:0; font-weight:600; letter-spacing:.03em; }
   #file { color:var(--muted); font-size:13px; }
-  #stats { color:var(--muted); font-size:12px; margin-left:auto;
-           font-family:Consolas,monospace; }
-  #load { font-size:13px; }
+  #stats { color:var(--muted); font-size:12px; margin-left:auto; font-family:Consolas,monospace; }
   nav { display:flex; gap:2px; padding:0 20px; background:var(--panel);
-        border-bottom:1px solid var(--line); }
+        border-bottom:1px solid var(--line); flex-wrap:wrap; }
   nav button { border:1px solid transparent; border-bottom:none; background:none;
-    padding:8px 14px; font:inherit; font-size:13px; color:var(--muted);
+    padding:8px 13px; font:inherit; font-size:13px; color:var(--muted);
     cursor:pointer; border-radius:4px 4px 0 0; }
-  nav button.on { background:var(--bg); color:var(--accent); font-weight:600;
-                  border-color:var(--line); }
+  nav button.on { background:var(--bg); color:var(--accent); font-weight:600; border-color:var(--line); }
   nav button:disabled { opacity:.35; cursor:default; }
   main { display:grid; grid-template-columns:1fr 1fr; gap:18px; padding:18px 20px; }
   section { background:var(--panel); border:1px solid var(--line); border-radius:4px;
@@ -35,12 +32,10 @@
           color:var(--muted); display:flex; align-items:center; gap:10px; }
   .head .tools { margin-left:auto; display:flex; gap:6px; }
   .head button { font:inherit; font-size:11px; padding:2px 8px; cursor:pointer;
-                 border:1px solid var(--line); background:var(--panel);
-                 border-radius:3px; color:var(--muted); }
-  .head button:hover { background:var(--bg); }
+                 border:1px solid var(--line); background:var(--panel); border-radius:3px; color:var(--muted); }
   .head input { font:inherit; font-size:12px; padding:2px 6px; width:130px;
                 border:1px solid var(--line); border-radius:3px; }
-  .body { padding:10px 12px; overflow:auto; max-height:70vh; }
+  .body { padding:10px 12px; overflow:auto; max-height:72vh; }
   pre { margin:0; font:12.5px/1.7 "Cascadia Mono", Consolas, monospace; }
   .srcline { display:block; padding:0 4px; border-radius:2px; cursor:pointer; }
   .srcline .no { display:inline-block; width:2.4em; color:var(--muted);
@@ -58,25 +53,47 @@
   tr.row.rel td { background:#f0f4e8; }
   .pos { color:var(--muted); font-family:Consolas,monospace; white-space:nowrap; }
   .cls { color:var(--accent); font-family:Consolas,monospace; }
-  .lex { font-family:Consolas,monospace; }
+  .lex, .mono { font-family:Consolas,monospace; }
   .tree { font:12.5px/1.75 Consolas, monospace; }
   .tw { display:flex; align-items:flex-start; }
-  .tog { width:14px; flex:0 0 14px; color:var(--muted); cursor:pointer;
-         user-select:none; text-align:center; }
+  .tog { width:14px; flex:0 0 14px; color:var(--muted); cursor:pointer; user-select:none; text-align:center; }
   .node { cursor:pointer; padding:0 3px; border-radius:2px; }
   .node:hover { background:#f4f6f8; }
   .node.on { background:var(--hl); }
   .node.rel { background:#f0f4e8; }
   .kind { color:var(--accent); }
-  .label { color:var(--ink); }
   .kids.hid { display:none; }
-  .diag { color:var(--err); font-size:12.5px; margin-bottom:5px; cursor:pointer;
-          font-family:Consolas,monospace; }
+  .diag { color:var(--err); font-size:12.5px; margin-bottom:5px; cursor:pointer; font-family:Consolas,monospace; }
   .empty { color:var(--muted); font-size:13px; padding:8px 0; }
   .scopehdr { color:var(--accent); font-weight:600; margin-top:5px; }
   .scopeid { color:var(--muted); font-weight:400; }
   .scopeend { color:var(--muted); font-style:italic; font-size:11.5px; }
   .ty { color:var(--num); }
+  .fnhdr { color:var(--accent); font-weight:600; margin:8px 0 4px; font-family:Consolas,monospace; }
+  .blk { border:1px solid var(--line); border-radius:3px; margin:0 0 8px; }
+  .blk .bh { background:#f4f6f8; padding:4px 8px; font-family:Consolas,monospace;
+             font-size:12px; color:var(--accent); display:flex; }
+  .blk .bh span { margin-left:auto; color:var(--muted); }
+  .blk .bi { padding:4px 8px; font-family:Consolas,monospace; font-size:12px; }
+  .badge { display:inline-block; min-width:62px; text-align:center; font-size:10.5px;
+           padding:1px 6px; border-radius:9px; background:var(--hl); color:var(--accent);
+           font-family:"Segoe UI",sans-serif; margin-right:6px; }
+  .rw { border-bottom:1px solid #eef0f3; padding:6px 2px; cursor:pointer; }
+  .rw:hover { background:#f4f6f8; }
+  .rw.on { background:var(--hl); }
+  .rw .code { font-family:Consolas,monospace; font-size:12px; }
+  .rw .why { color:var(--muted); font-size:12px; margin-top:2px; }
+  .arrow { color:var(--muted); }
+  .banner { padding:10px 12px; border-radius:4px; margin-bottom:10px; font-size:13.5px; }
+  .banner.ok { background:#eef5f0; color:var(--ok); border:1px solid #cfe3d6; }
+  .banner.bad { background:#fbeeec; color:var(--err); border:1px solid #edd2cd; }
+  .chain { display:flex; flex-direction:column; gap:0; margin-top:10px; }
+  .step { border:1px solid var(--line); border-radius:3px; padding:7px 10px; background:#fff; }
+  .step .lbl { font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  .step .val { font-family:Consolas,monospace; font-size:12.5px; margin-top:2px; }
+  .down { text-align:center; color:var(--muted); font-size:13px; line-height:1.1; padding:2px 0; }
+  .out { background:#f7f8fa; border:1px solid var(--line); border-radius:3px;
+         padding:6px 8px; font-family:Consolas,monospace; font-size:12px; white-space:pre-wrap; }
 </style>
 </head>
 <body>
@@ -109,10 +126,10 @@
 const PHASES = [
   ["preprocess","Preprocessor"], ["lex","Tokens"], ["parse","Syntax tree"],
   ["sem","Symbols"], ["ir","IR"], ["cfg","Control flow"],
-  ["opt","Optimised"], ["codegen","Assembly"]
+  ["opt","Optimised"], ["verify","Verify"], ["codegen","Assembly"]
 ];
 
-let trace=null, active=null, tokensByLine={};
+let trace=null, tokensByLine={};
 
 document.getElementById("load").addEventListener("change", ev => {
   const f = ev.target.files[0];
@@ -124,24 +141,24 @@ document.getElementById("load").addEventListener("change", ev => {
   };
   r.readAsText(f);
 });
-
 document.getElementById("clearsel").onclick = clearAll;
 
 function load(t) {
   trace = t;
   document.getElementById("file").textContent = t.source.file;
-  indexTokens();
-  renderSource();
-  buildTabs();
-  renderStats();
+  indexTokens(); renderSource(); buildTabs(); renderStats();
   const first = PHASES.find(p => phase(p[0]));
   if (first) select(first[0]);
 }
+window.__cvizLoad = load;
 
 function phase(n) { return trace ? trace.phases.find(p => p.phase === n) : null; }
+function events(n, kind) {
+  const p = phase(n);
+  return p ? p.events.filter(e => !kind || e.kind === kind) : [];
+}
 
-// Syntax highlighting is driven by the compiler's own token stream, not by
-// a regular expression, so what is shown is what the lexer actually produced.
+// Syntax highlighting is driven by the compiler's own token stream.
 function indexTokens() {
   tokensByLine = {};
   const lex = phase("lex");
@@ -182,21 +199,18 @@ function lineHtml(no, text, hl) {
     if (!str) return;
     let html = escapeHtml(str);
     if (hl && hl.line === no && hl.len > 0) {
-      const a = hl.col, b = hl.col + hl.len;
-      const s = startCol, e = startCol + str.length;
+      const a = hl.col, b = hl.col + hl.len, s = startCol, e = startCol + str.length;
       if (a < e && b > s) {
         const from = Math.max(a,s) - s, to = Math.min(b,e) - s;
-        html = escapeHtml(str.slice(0,from)) + "<mark>" +
-               escapeHtml(str.slice(from,to)) + "</mark>" +
-               escapeHtml(str.slice(to));
+        html = escapeHtml(str.slice(0,from)) + "<mark>" + escapeHtml(str.slice(from,to)) +
+               "</mark>" + escapeHtml(str.slice(to));
       }
     }
     out += cls ? '<span class="' + cls + '">' + html + "</span>" : html;
   };
   toks.forEach(t => {
     if (t.span.col > col) emit(text.slice(col-1, t.span.col-1), col, null);
-    const lex = text.slice(t.span.col-1, t.span.col-1+t.span.len);
-    emit(lex, t.span.col, tokClass(t.tclass));
+    emit(text.slice(t.span.col-1, t.span.col-1+t.span.len), t.span.col, tokClass(t.tclass));
     col = t.span.col + t.span.len;
   });
   if (col <= text.length) emit(text.slice(col-1), col, null);
@@ -217,25 +231,23 @@ function buildTabs() {
 }
 
 function renderStats() {
-  const lex = phase("lex"), par = phase("parse");
   const bits = [];
+  const lex = phase("lex"), par = phase("parse");
   if (lex) bits.push(lex.events.length + " tokens");
   if (par) bits.push(par.events.length + " nodes");
+  const sum = events("opt","summary")[0];
+  if (sum) bits.push(sum.before + "\u2192" + sum.after + " instr, " + sum.rewrites + " rewrites");
   const dg = trace.phases.reduce((n,p) => n + p.diagnostics.length, 0);
   bits.push(dg + (dg === 1 ? " diagnostic" : " diagnostics"));
-  const bad = trace.phases.filter(p => p.status !== "ok").map(p => p.phase);
-  bits.push(bad.length ? "failed: " + bad.join(", ") : "all phases ok");
-  document.getElementById("stats").textContent = bits.join("   ·   ");
+  const v = events("verify","validation")[0];
+  if (v) bits.push(v.result === "equal" ? "validated" : "DIVERGENT");
+  document.getElementById("stats").textContent = bits.join("   \u00b7   ");
 }
 
 function select(id) {
-  active = id;
-  document.querySelectorAll("#tabs button").forEach(b =>
-    b.classList.toggle("on", b.dataset.phase === id));
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.phase === id));
   const p = phase(id);
-  document.getElementById("panelhead").textContent =
-    p ? p.phase + " — " + p.status : "phase output";
-
+  document.getElementById("panelhead").textContent = p ? p.phase + " \u2014 " + p.status : "phase output";
   const tools = document.getElementById("paneltools");
   tools.innerHTML = "";
   const out = document.getElementById("out");
@@ -245,8 +257,7 @@ function select(id) {
   p.diagnostics.forEach(d => {
     const div = document.createElement("div");
     div.className = "diag";
-    div.textContent = d.span.line + ":" + d.span.col + "  " + d.message +
-                      "  [" + d.code + "]";
+    div.textContent = d.span.line + ":" + d.span.col + "  " + d.message + "  [" + d.code + "]";
     div.onclick = () => highlight(d.span);
     out.appendChild(div);
   });
@@ -254,29 +265,31 @@ function select(id) {
   if (id === "lex")        renderTokens(p, out, tools);
   else if (id === "parse") renderTree(p, out, tools);
   else if (id === "sem")   renderSymbols(p, out);
+  else if (id === "ir")    renderCode(p, out, tools, "ir");
+  else if (id === "cfg")   renderCFG(p, out);
+  else if (id === "opt")   renderOpt(p, out, tools);
+  else if (id === "verify")renderVerify(p, out);
   else                     out.appendChild(rawList(p));
 }
+window.__cvizSelect = select;
 
 function renderTokens(p, out, tools) {
   const filter = document.createElement("input");
   filter.placeholder = "filter";
   tools.appendChild(filter);
-
   const t = document.createElement("table");
   p.events.forEach(e => {
     const tr = document.createElement("tr");
     tr.className = "row";
     tr.dataset.line = e.span ? e.span.line : 0;
-    tr.dataset.key  = ((e.tclass||"") + " " + (e.lexeme||"")).toLowerCase();
-    tr.innerHTML =
-      '<td class="pos">' + (e.span ? e.span.line + ":" + e.span.col : "") + "</td>" +
-      '<td class="cls">' + e.tclass + "</td>" +
-      '<td class="lex">' + escapeHtml(e.lexeme || "") + "</td>";
+    tr.dataset.key = ((e.tclass||"") + " " + (e.lexeme||"")).toLowerCase();
+    tr.innerHTML = '<td class="pos">' + (e.span ? e.span.line + ":" + e.span.col : "") + "</td>" +
+                   '<td class="cls">' + e.tclass + "</td>" +
+                   '<td class="lex">' + escapeHtml(e.lexeme || "") + "</td>";
     tr.onclick = () => { markOne(tr, "tr.row"); highlight(e.span); };
     t.appendChild(tr);
   });
   out.appendChild(t);
-
   filter.oninput = () => {
     const q = filter.value.trim().toLowerCase();
     t.querySelectorAll("tr.row").forEach(tr =>
@@ -288,36 +301,31 @@ function renderTree(p, out, tools) {
   const byId = {};
   p.events.forEach(e => byId[e.id] = e);
   const roots = p.events.filter(e => e.root);
-
   const ex = document.createElement("button"); ex.textContent = "expand all";
   const co = document.createElement("button"); co.textContent = "collapse all";
   tools.appendChild(ex); tools.appendChild(co);
-
   const box = document.createElement("div");
   box.className = "tree";
   roots.forEach(r => box.appendChild(treeNode(r, byId, 0)));
   if (!roots.length) box.innerHTML = '<div class="empty">No declarations parsed.</div>';
   out.appendChild(box);
-
   ex.onclick = () => box.querySelectorAll(".kids").forEach(k => {
     k.classList.remove("hid"); k.previousSibling.querySelector(".tog").textContent = "\u25be"; });
   co.onclick = () => box.querySelectorAll(".kids").forEach(k => {
     k.classList.add("hid"); k.previousSibling.querySelector(".tog").textContent = "\u25b8"; });
+  window.__cvizExpandAll = ex.onclick;
 }
 
 function treeNode(e, byId, depth) {
   const wrap = document.createElement("div");
   const kids = (e.children || []).map(c => byId[c]).filter(Boolean);
-
   const row = document.createElement("div");
   row.className = "tw";
   row.style.paddingLeft = (depth * 16) + "px";
-
   const tog = document.createElement("span");
   tog.className = "tog";
   tog.textContent = kids.length ? "\u25be" : "";
   row.appendChild(tog);
-
   const n = document.createElement("span");
   n.className = "node";
   n.dataset.line = e.span ? e.span.line : 0;
@@ -326,7 +334,6 @@ function treeNode(e, byId, depth) {
   n.onclick = ev => { ev.stopPropagation(); markOne(n, ".node"); highlight(e.span); };
   row.appendChild(n);
   wrap.appendChild(row);
-
   if (kids.length) {
     const box = document.createElement("div");
     box.className = "kids";
@@ -341,59 +348,209 @@ function treeNode(e, byId, depth) {
   return wrap;
 }
 
-// Scopes are replayed in the order the analyser opened and closed them, so
-// the nesting shown is the nesting the compiler actually maintained.
+// Scopes are replayed in the order the analyser opened and closed them.
 function renderSymbols(p, out) {
-  const stack = [];
-  const rows = [];
-
+  const stack = [], rows = [];
   p.events.forEach(e => {
-    if (e.kind === "scope_open") {
-      stack.push(e.scope);
-      rows.push({ type:"open", depth: stack.length - 1, scope: e.scope, of: e.of });
-    } else if (e.kind === "scope_close") {
-      rows.push({ type:"close", depth: Math.max(0, stack.length - 1) });
-      stack.pop();
-    } else if (e.kind === "symbol") {
-      rows.push({ type:"sym", depth: stack.length,
-                  name: e.name, vtype: e.type, span: e.span });
-    }
+    if (e.kind === "scope_open") { stack.push(e.scope); rows.push({type:"open", depth:stack.length-1, scope:e.scope, of:e.of}); }
+    else if (e.kind === "scope_close") { rows.push({type:"close", depth:Math.max(0,stack.length-1)}); stack.pop(); }
+    else if (e.kind === "symbol") rows.push({type:"sym", depth:stack.length, name:e.name, vtype:e.type, span:e.span});
   });
-
   const box = document.createElement("div");
   box.className = "tree";
-
   rows.forEach(r => {
     const div = document.createElement("div");
     div.style.paddingLeft = (r.depth * 18) + "px";
-
     if (r.type === "open") {
       div.className = "scopehdr";
-      div.innerHTML = r.of + " scope <span class=\"scopeid\">#" + r.scope + "</span>";
+      div.innerHTML = r.of + ' scope <span class="scopeid">#' + r.scope + "</span>";
     } else if (r.type === "close") {
       div.innerHTML = '<span class="scopeend">end scope</span>';
     } else {
       const s = document.createElement("span");
       s.className = "node";
       s.dataset.line = r.span ? r.span.line : 0;
-      s.innerHTML = escapeHtml(r.name) +
-                    ' <span class="ty">: ' + escapeHtml(r.vtype) + "</span>";
+      s.innerHTML = escapeHtml(r.name) + ' <span class="ty">: ' + escapeHtml(r.vtype) + "</span>";
       s.onclick = ev => { ev.stopPropagation(); markOne(s, ".node"); highlight(r.span); };
       div.appendChild(s);
     }
     box.appendChild(div);
   });
-
   if (!rows.length) box.innerHTML = '<div class="empty">No symbols recorded.</div>';
-
   const types = p.events.filter(e => e.kind === "type").length;
   const note = document.createElement("div");
   note.className = "empty";
-  note.textContent = types + " expression node" + (types === 1 ? "" : "s") +
-                     " assigned a type.";
+  note.textContent = types + " expression node" + (types === 1 ? "" : "s") + " assigned a type.";
   box.appendChild(note);
-
   out.appendChild(box);
+}
+
+// Three-address code, grouped by function. Each instruction links back to
+// the syntax tree node and the source span it came from.
+function renderCode(p, out, tools, stage) {
+  const list = p.events.filter(e => e.kind === "instr" && (!stage || e.stage === stage));
+  const byFn = {};
+  list.forEach(e => (byFn[e.fn] ||= []).push(e));
+  const box = document.createElement("div");
+  box.className = "tree";
+  Object.keys(byFn).forEach(fn => {
+    const h = document.createElement("div");
+    h.className = "fnhdr";
+    h.textContent = "func " + fn;
+    box.appendChild(h);
+    byFn[fn].forEach(e => {
+      const d = document.createElement("div");
+      d.className = "node";
+      d.dataset.line = e.span ? e.span.line : 0;
+      d.style.paddingLeft = e.label ? "0" : "16px";
+      d.innerHTML = '<span class="pos">' + String(e.id).padStart(3," ") + "</span>  " +
+                    escapeHtml(e.text) + (e.block ? ' <span class="scopeid">' + e.block + "</span>" : "");
+      d.onclick = () => { markOne(d, ".node"); highlight(e.span); };
+      box.appendChild(d);
+    });
+  });
+  if (!list.length) box.innerHTML = '<div class="empty">No instructions.</div>';
+  out.appendChild(box);
+}
+
+function renderCFG(p, out) {
+  const ir = events("ir","instr").filter(e => e.stage === "ir");
+  const text = {};
+  ir.forEach(e => text[e.id] = e.text);
+  const byFn = {};
+  p.events.forEach(e => (byFn[e.fn] ||= []).push(e));
+  const box = document.createElement("div");
+  Object.keys(byFn).forEach(fn => {
+    const h = document.createElement("div");
+    h.className = "fnhdr";
+    h.textContent = "func " + fn;
+    box.appendChild(h);
+    byFn[fn].forEach(b => {
+      const d = document.createElement("div");
+      d.className = "blk";
+      const succ = (b.succ || []).length ? "\u2192 " + b.succ.join(", ") : "\u2192 exit";
+      d.innerHTML = '<div class="bh">' + b.block + "<span>" + succ + "</span></div>";
+      const body = document.createElement("div");
+      body.className = "bi";
+      (b.instrs || []).forEach(id => {
+        const line = document.createElement("div");
+        line.className = "node";
+        const e = ir.find(x => x.id === id);
+        line.dataset.line = e && e.span ? e.span.line : 0;
+        line.textContent = text[id] || ("#" + id);
+        if (e) line.onclick = () => { markOne(line, ".node"); highlight(e.span); };
+        body.appendChild(line);
+      });
+      d.appendChild(body);
+      box.appendChild(d);
+    });
+  });
+  out.appendChild(box);
+}
+
+// Every rewrite, with the reason the optimiser recorded for it.
+function renderOpt(p, out, tools) {
+  const sum = p.events.find(e => e.kind === "summary");
+  const rewrites = p.events.filter(e => e.kind === "rewrite");
+  const btn = document.createElement("button");
+  btn.textContent = "optimised code";
+  let showing = "rewrites";
+  tools.appendChild(btn);
+
+  const box = document.createElement("div");
+  const draw = () => {
+    box.innerHTML = "";
+    if (sum) {
+      const s = document.createElement("div");
+      s.className = "banner ok";
+      s.innerHTML = "<b>" + sum.before + " \u2192 " + sum.after + " instructions</b> after " +
+        sum.rewrites + " rewrites &nbsp;\u00b7&nbsp; const " + sum.by_pass.const +
+        ", copy " + (sum.by_pass.copy || 0) + ", algebraic " + sum.by_pass.algebraic +
+        ", cse " + sum.by_pass.cse + ", dce " + sum.by_pass.dce;
+      box.appendChild(s);
+    }
+    if (showing === "rewrites") {
+      rewrites.forEach(r => {
+        const d = document.createElement("div");
+        d.className = "rw";
+        d.dataset.line = r.span ? r.span.line : 0;
+        d.innerHTML = '<div class="code"><span class="badge">' + r.pass + "</span>#" + r.id + "  " +
+          escapeHtml(r.before) + ' <span class="arrow">\u2192</span> ' + escapeHtml(r.after) + "</div>" +
+          '<div class="why">' + escapeHtml(r.reason) + (r.span ? "  (line " + r.span.line + ")" : "") + "</div>";
+        d.onclick = () => { markOne(d, ".rw"); highlight(r.span); };
+        box.appendChild(d);
+      });
+      if (!rewrites.length) box.innerHTML += '<div class="empty">No rewrites were applied.</div>';
+    } else {
+      renderCode(p, box, document.createElement("div"), "optimised");
+    }
+  };
+  btn.onclick = () => {
+    showing = showing === "rewrites" ? "code" : "rewrites";
+    btn.textContent = showing === "rewrites" ? "optimised code" : "rewrite log";
+    draw();
+  };
+  draw();
+  out.appendChild(box);
+}
+
+// The validation result, and when the optimiser is wrong, the chain from the
+// source line to the single rewrite responsible.
+function renderVerify(p, out) {
+  const v = p.events.find(e => e.kind === "validation");
+  if (!v) { out.innerHTML = '<div class="empty">No validation was run.</div>'; return; }
+  const box = document.createElement("div");
+  const ok = v.result === "equal";
+  const b = document.createElement("div");
+  b.className = "banner " + (ok ? "ok" : "bad");
+  b.innerHTML = ok
+    ? "<b>The optimised program matches the unoptimised reference.</b><br>" +
+      v.rewrites + " rewrites applied, behaviour unchanged."
+    : "<b>Divergence.</b><br>The optimised program behaves differently. " +
+      "Bisection over " + v.rewrites + " rewrites took " + v.runs + " interpreter runs.";
+  box.appendChild(b);
+
+  const outs = document.createElement("div");
+  outs.innerHTML = '<div class="step"><div class="lbl">reference output (return ' + v.ref_ret +
+    ')</div><div class="out">' + escapeHtml(v.ref_output || "(none)") + "</div></div>" +
+    (ok ? "" : '<div class="down">\u2260</div><div class="step"><div class="lbl">optimised output (return ' +
+      v.opt_ret + ')</div><div class="out">' + escapeHtml(v.opt_output || "(none)") + "</div></div>");
+  box.appendChild(outs);
+
+  if (!ok && v.culprit) {
+    const c = v.culprit;
+    const chain = document.createElement("div");
+    chain.className = "chain";
+    const step = (lbl, val, line) => {
+      const d = document.createElement("div");
+      d.className = "step node";
+      if (line) d.dataset.line = line;
+      d.innerHTML = '<div class="lbl">' + lbl + '</div><div class="val">' + val + "</div>";
+      return d;
+    };
+    const srcline = c.span ? c.span.line : 0;
+    const srctext = srcline ? (trace.source.lines[srcline-1] || "").trim() : "";
+    const a = step("source line " + srcline, escapeHtml(srctext), srcline);
+    a.onclick = () => { markOne(a, ".node"); highlight(c.span); };
+    chain.appendChild(a);
+    chain.appendChild(divDown());
+    chain.appendChild(step("syntax tree node", "#" + (c.from ? c.from.id : "?"), srcline));
+    chain.appendChild(divDown());
+    chain.appendChild(step("ir instruction #" + c.instr, escapeHtml(c.before), srcline));
+    chain.appendChild(divDown());
+    chain.appendChild(step("rewrite #" + c.id + " \u00b7 pass " + c.pass,
+      escapeHtml(c.before) + " \u2192 " + escapeHtml(c.after) + "<br><span style='color:var(--muted)'>" +
+      escapeHtml(c.reason) + "</span>", srcline));
+    box.appendChild(chain);
+  }
+  out.appendChild(box);
+}
+
+function divDown() {
+  const d = document.createElement("div");
+  d.className = "down";
+  d.textContent = "\u2193";
+  return d;
 }
 
 function rawList(p) {
@@ -408,12 +565,11 @@ function markOne(el, sel) {
 }
 
 // Selecting a source line marks every artefact of the active phase that
-// originated on it, which is the provenance link read backwards.
+// originated on it: the provenance link read backwards.
 function selectLine(no) {
   document.querySelectorAll(".srcline.on").forEach(x => x.classList.remove("on"));
   const el = document.querySelector('.srcline[data-line="' + no + '"]');
   if (el) el.classList.add("on");
-
   document.querySelectorAll(".rel").forEach(x => x.classList.remove("rel"));
   let first = null;
   document.querySelectorAll('#out [data-line="' + no + '"]').forEach(x => {
@@ -422,23 +578,24 @@ function selectLine(no) {
   });
   if (first) first.scrollIntoView({block:"center"});
 }
+window.__cvizSelectLine = selectLine;
 
 function highlight(span) {
   document.querySelectorAll(".srcline").forEach(x => x.classList.remove("on"));
   if (!span || !span.line) return;
   const el = document.querySelector('.srcline[data-line="' + span.line + '"]');
   if (!el) return;
-  const text = trace.source.lines[span.line - 1] || "";
   document.querySelectorAll(".srcline mark").forEach(m => {
     const p = m.closest(".srcline");
     const n = +p.dataset.line;
     p.innerHTML = lineHtml(n, trace.source.lines[n-1] || "", null);
   });
-  el.innerHTML = lineHtml(span.line, text, span);
+  el.innerHTML = lineHtml(span.line, trace.source.lines[span.line-1] || "", span);
   el.classList.add("on");
   el.onclick = () => selectLine(span.line);
   el.scrollIntoView({block:"center"});
 }
+window.__cvizHighlight = highlight;
 
 function clearAll() {
   document.querySelectorAll(".on, .rel").forEach(x => x.classList.remove("on","rel"));
@@ -446,7 +603,7 @@ function clearAll() {
 }
 
 function escapeHtml(s) {
-  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 </script>
 </body>

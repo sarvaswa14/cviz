@@ -36,7 +36,6 @@ const char* tok_name(Tok t) {
         case Tok::CharLit:      return "CHAR_LIT";
         case Tok::StringLit:    return "STRING_LIT";
         case Tok::FloatLit:     return "FLOAT_LIT";
-
         case Tok::KwAuto:       return "KW_AUTO";
         case Tok::KwBreak:      return "KW_BREAK";
         case Tok::KwCase:       return "KW_CASE";
@@ -74,11 +73,9 @@ const char* tok_name(Tok t) {
         case Tok::KwBool:       return "KW_BOOL";
         case Tok::KwComplex:    return "KW_COMPLEX";
         case Tok::KwImaginary:  return "KW_IMAGINARY";
-
         case Tok::LShiftAssign: return "LSHIFT_ASSIGN";
         case Tok::RShiftAssign: return "RSHIFT_ASSIGN";
         case Tok::Ellipsis:     return "ELLIPSIS";
-
         case Tok::Arrow:        return "ARROW";
         case Tok::PlusPlus:     return "PLUSPLUS";
         case Tok::MinusMinus:   return "MINUSMINUS";
@@ -98,7 +95,6 @@ const char* tok_name(Tok t) {
         case Tok::AmpAssign:    return "AMP_ASSIGN";
         case Tok::CaretAssign:  return "CARET_ASSIGN";
         case Tok::PipeAssign:   return "PIPE_ASSIGN";
-
         case Tok::LBracket:     return "LBRACKET";
         case Tok::RBracket:     return "RBRACKET";
         case Tok::LParen:       return "LPAREN";
@@ -124,11 +120,10 @@ const char* tok_name(Tok t) {
         case Tok::Assign:       return "ASSIGN";
         case Tok::Comma:        return "COMMA";
         case Tok::Hash:         return "HASH";
-
         case Tok::EndOfFile:    return "EOF_TOKEN";
         case Tok::Error:        return "ERROR";
     }
     return "UNKNOWN";
 }
 
-}  
+}  // namespace cviz

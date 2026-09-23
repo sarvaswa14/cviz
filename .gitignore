@@ -1,14 +1,8 @@
-# build artefacts
 build/
 *.o
 *.exe
-*.s
-
-# traces produced by runs
+cviz
+cviz_reference*
 *.trace.json
 out/
-
-# editor
 .vscode/
-*.swp
-out/

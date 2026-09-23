@@ -82,6 +82,21 @@ void Sema::record_type(const Expr* e) {
     events_.push_back(ev);
 }
 
+// printf and putchar are provided by the execution engine rather than by a
+// header, since the preprocessor does not yet handle system includes. They
+// are declared in file scope but not recorded in the trace.
+void Sema::declare_builtins() {
+    auto charp = Type::pointer_to(Type::make(TypeKind::Char));
+    auto pf = Type::function(Type::make(TypeKind::Int), {charp});
+    pf->variadic = true;
+    Symbol s1; s1.name = "printf"; s1.type = pf; s1.is_function = true; s1.defined = true;
+    table_.declare(s1);
+
+    auto pc = Type::function(Type::make(TypeKind::Int), {Type::make(TypeKind::Int)});
+    Symbol s2; s2.name = "putchar"; s2.type = pc; s2.is_function = true; s2.defined = true;
+    table_.declare(s2);
+}
+
 bool Sema::is_integer(const TypePtr& t) {
     if (!t) return false;
     switch (t->kind) {
@@ -168,8 +183,10 @@ bool Sema::is_lvalue(const Expr& e) {
             return false;
     }
 }
+
 void Sema::analyse(TranslationUnit& tu) {
     open_scope("file");
+    declare_builtins();
     for (auto& d : tu.decls) visit_decl(*d);
     close_scope();
 }
@@ -188,8 +205,7 @@ void Sema::visit_decl(Decl& d) {
         Symbol* prev = table_.lookup_current(d.func_name);
         if (prev && prev->defined && fn.defined) {
             error("duplicate-declaration",
-                  "function '" + d.func_name + "' is defined more than once",
-                  d.span);
+                  "function '" + d.func_name + "' is defined more than once", d.span);
         } else if (!prev) {
             table_.declare(fn);
             record_symbol(fn);
@@ -202,8 +218,7 @@ void Sema::visit_decl(Decl& d) {
         current_return_ = d.func_type ? d.func_type->base : nullptr;
         open_scope("function");
 
-        const auto& ps = d.func_type ? d.func_type->params
-                                     : std::vector<TypePtr>{};
+        const auto& ps = d.func_type ? d.func_type->params : std::vector<TypePtr>{};
         for (size_t i = 0; i < ps.size(); ++i) {
             if (ps[i] && ps[i]->kind == TypeKind::Void) continue;
             std::string pname = i < d.param_names.size() ? d.param_names[i] : "";
@@ -214,18 +229,15 @@ void Sema::visit_decl(Decl& d) {
             p.span = d.span;
             if (!table_.declare(p)) {
                 error("duplicate-declaration",
-                      "parameter '" + pname + "' is declared more than once",
-                      d.span);
+                      "parameter '" + pname + "' is declared more than once", d.span);
             } else {
                 record_symbol(p);
             }
         }
 
-        // The body's compound statement does not open a further scope, so
-        // that a local may not shadow a parameter of the same function.
-        if (d.body) {
-            for (auto& item : d.body->items) visit_stmt(*item);
-        }
+        // The body shares the function scope, so a local may not shadow a
+        // parameter of the same function.
+        for (auto& item : d.body->items) visit_stmt(*item);
 
         close_scope();
         current_return_ = nullptr;
@@ -236,19 +248,18 @@ void Sema::visit_decl(Decl& d) {
         if (dr.name.empty()) continue;
 
         if (dr.type && dr.type->kind == TypeKind::Void) {
-            error("invalid-type",
-                  "variable '" + dr.name + "' declared with type void", dr.span);
+            error("invalid-type", "variable '" + dr.name + "' declared with type void", dr.span);
         }
 
         Symbol s;
         s.name = dr.name;
         s.type = dr.type;
         s.span = dr.span;
+        s.is_function = dr.type && dr.type->kind == TypeKind::Function;
 
         if (!table_.declare(s)) {
             error("duplicate-declaration",
-                  "'" + dr.name + "' is already declared in this scope",
-                  dr.span);
+                  "'" + dr.name + "' is already declared in this scope", dr.span);
         } else {
             record_symbol(s);
         }
@@ -286,8 +297,7 @@ void Sema::visit_stmt(Stmt& s) {
                 TypePtr t = decay(visit_expr(*s.expr));
                 if (t && !is_scalar(t)) {
                     error("invalid-condition",
-                          "condition has non-scalar type '" + t->to_string() + "'",
-                          s.expr->span);
+                          "condition has non-scalar type '" + t->to_string() + "'", s.expr->span);
                 }
             }
             if (s.body) visit_stmt(*s.body);
@@ -301,8 +311,7 @@ void Sema::visit_stmt(Stmt& s) {
                 TypePtr t = decay(visit_expr(*s.expr));
                 if (t && !is_scalar(t)) {
                     error("invalid-condition",
-                          "condition has non-scalar type '" + t->to_string() + "'",
-                          s.expr->span);
+                          "condition has non-scalar type '" + t->to_string() + "'", s.expr->span);
                 }
             }
             ++loop_depth_;
@@ -318,8 +327,7 @@ void Sema::visit_stmt(Stmt& s) {
                 TypePtr t = decay(visit_expr(*s.cond_expr));
                 if (t && !is_scalar(t)) {
                     error("invalid-condition",
-                          "condition has non-scalar type '" + t->to_string() + "'",
-                          s.cond_expr->span);
+                          "condition has non-scalar type '" + t->to_string() + "'", s.cond_expr->span);
                 }
             }
             if (s.step_expr) visit_expr(*s.step_expr);
@@ -335,8 +343,7 @@ void Sema::visit_stmt(Stmt& s) {
                 TypePtr t = decay(visit_expr(*s.expr));
                 if (t && !is_integer(t)) {
                     error("invalid-switch",
-                          "switch expression has non-integer type '" +
-                          t->to_string() + "'", s.expr->span);
+                          "switch expression has non-integer type '" + t->to_string() + "'", s.expr->span);
                 }
             }
             ++switch_depth_;
@@ -346,50 +353,35 @@ void Sema::visit_stmt(Stmt& s) {
         }
 
         case StmtKind::Case:
-            if (switch_depth_ == 0) {
-                error("misplaced-label",
-                      "'case' label outside a switch statement", s.span);
-            }
+            if (switch_depth_ == 0) error("misplaced-label", "'case' label outside a switch statement", s.span);
             if (s.expr) visit_expr(*s.expr);
             if (s.body) visit_stmt(*s.body);
             break;
 
         case StmtKind::Default:
-            if (switch_depth_ == 0) {
-                error("misplaced-label",
-                      "'default' label outside a switch statement", s.span);
-            }
+            if (switch_depth_ == 0) error("misplaced-label", "'default' label outside a switch statement", s.span);
             if (s.body) visit_stmt(*s.body);
             break;
 
         case StmtKind::Break:
-            if (loop_depth_ == 0 && switch_depth_ == 0) {
-                error("misplaced-jump",
-                      "'break' outside a loop or switch statement", s.span);
-            }
+            if (loop_depth_ == 0 && switch_depth_ == 0)
+                error("misplaced-jump", "'break' outside a loop or switch statement", s.span);
             break;
 
         case StmtKind::Continue:
-            if (loop_depth_ == 0) {
-                error("misplaced-jump", "'continue' outside a loop", s.span);
-            }
+            if (loop_depth_ == 0) error("misplaced-jump", "'continue' outside a loop", s.span);
             break;
 
         case StmtKind::Return: {
-            bool want_void = current_return_ &&
-                             current_return_->kind == TypeKind::Void;
+            bool want_void = current_return_ && current_return_->kind == TypeKind::Void;
             if (s.expr) {
                 TypePtr t = decay(visit_expr(*s.expr));
                 if (want_void) {
-                    error("return-mismatch",
-                          "returning a value from a function returning void",
-                          s.expr->span);
-                } else if (t && current_return_ &&
-                           !compatible(current_return_, t)) {
+                    error("return-mismatch", "returning a value from a function returning void", s.expr->span);
+                } else if (t && current_return_ && !compatible(current_return_, t)) {
                     error("return-mismatch",
                           "cannot return '" + t->to_string() +
-                          "' from a function returning '" +
-                          current_return_->to_string() + "'", s.expr->span);
+                          "' from a function returning '" + current_return_->to_string() + "'", s.expr->span);
                 }
             } else if (current_return_ && !want_void) {
                 error("return-mismatch",
@@ -407,9 +399,6 @@ void Sema::visit_stmt(Stmt& s) {
 TypePtr Sema::visit_expr(Expr& e) {
     switch (e.kind) {
         case ExprKind::IntLit:
-            e.type = Type::make(TypeKind::Int);
-            break;
-
         case ExprKind::CharLit:
             e.type = Type::make(TypeKind::Int);
             break;
@@ -425,8 +414,7 @@ TypePtr Sema::visit_expr(Expr& e) {
         case ExprKind::Ident: {
             Symbol* s = table_.lookup(e.text);
             if (!s) {
-                error("undeclared-identifier",
-                      "use of undeclared identifier '" + e.text + "'", e.span);
+                error("undeclared-identifier", "use of undeclared identifier '" + e.text + "'", e.span);
                 e.type = Type::make(TypeKind::Int);
             } else {
                 e.type = s->type;
@@ -438,18 +426,15 @@ TypePtr Sema::visit_expr(Expr& e) {
             TypePtr t = e.lhs ? visit_expr(*e.lhs) : nullptr;
             switch (e.op) {
                 case Tok::Amp:
-                    if (e.lhs && !is_lvalue(*e.lhs)) {
-                        error("invalid-operand",
-                              "cannot take the address of a non-lvalue", e.span);
-                    }
+                    if (e.lhs && !is_lvalue(*e.lhs))
+                        error("invalid-operand", "cannot take the address of a non-lvalue", e.span);
                     e.type = Type::pointer_to(t);
                     break;
                 case Tok::Star: {
                     TypePtr d = decay(t);
                     if (!d || d->kind != TypeKind::Pointer) {
                         error("invalid-operand",
-                              "cannot dereference a value of type '" +
-                              (d ? d->to_string() : "?") + "'", e.span);
+                              "cannot dereference a value of type '" + (d ? d->to_string() : "?") + "'", e.span);
                         e.type = Type::make(TypeKind::Int);
                     } else {
                         e.type = d->base;
@@ -457,24 +442,18 @@ TypePtr Sema::visit_expr(Expr& e) {
                     break;
                 }
                 case Tok::Bang:
-                    if (t && !is_scalar(decay(t))) {
-                        error("invalid-operand",
-                              "operand of '!' has non-scalar type", e.span);
-                    }
+                    if (t && !is_scalar(decay(t)))
+                        error("invalid-operand", "operand of '!' has non-scalar type", e.span);
                     e.type = Type::make(TypeKind::Int);
                     break;
                 case Tok::Tilde:
-                    if (t && !is_integer(t)) {
-                        error("invalid-operand",
-                              "operand of '~' must have integer type", e.span);
-                    }
+                    if (t && !is_integer(t))
+                        error("invalid-operand", "operand of '~' must have integer type", e.span);
                     e.type = rank(t) < 4 ? Type::make(TypeKind::Int) : t;
                     break;
                 default:
-                    if (t && !is_arithmetic(t)) {
-                        error("invalid-operand",
-                              "operand must have arithmetic type", e.span);
-                    }
+                    if (t && !is_arithmetic(t))
+                        error("invalid-operand", "operand must have arithmetic type", e.span);
                     e.type = rank(t) < 4 ? Type::make(TypeKind::Int) : t;
                     break;
             }
@@ -493,60 +472,46 @@ TypePtr Sema::visit_expr(Expr& e) {
                         if (e.op == Tok::Minus) {
                             e.type = Type::make(TypeKind::Long);
                         } else {
-                            error("invalid-operands",
-                                  "cannot add two pointers", e.span);
+                            error("invalid-operands", "cannot add two pointers", e.span);
                             e.type = a;
                         }
                     } else if (pa || pb) {
                         TypePtr p = pa ? a : b;
                         TypePtr i = pa ? b : a;
-                        if (i && !is_integer(i)) {
-                            error("invalid-operands",
-                                  "pointer arithmetic requires an integer operand",
-                                  e.span);
-                        }
+                        if (i && !is_integer(i))
+                            error("invalid-operands", "pointer arithmetic requires an integer operand", e.span);
                         e.type = p;
                     } else {
-                        if ((a && !is_arithmetic(a)) || (b && !is_arithmetic(b))) {
-                            error("invalid-operands",
-                                  "operands must have arithmetic type", e.span);
-                        }
+                        if ((a && !is_arithmetic(a)) || (b && !is_arithmetic(b)))
+                            error("invalid-operands", "operands must have arithmetic type", e.span);
                         e.type = usual_conversions(a, b);
                     }
                     break;
                 }
                 case Tok::Star: case Tok::Slash:
-                    if ((a && !is_arithmetic(a)) || (b && !is_arithmetic(b))) {
-                        error("invalid-operands",
-                              "operands must have arithmetic type", e.span);
-                    }
+                    if ((a && !is_arithmetic(a)) || (b && !is_arithmetic(b)))
+                        error("invalid-operands", "operands must have arithmetic type", e.span);
                     e.type = usual_conversions(a, b);
                     break;
 
                 case Tok::Percent: case Tok::Amp: case Tok::Pipe:
                 case Tok::Caret: case Tok::LShift: case Tok::RShift:
-                    if ((a && !is_integer(a)) || (b && !is_integer(b))) {
-                        error("invalid-operands",
-                              "operands must have integer type", e.span);
-                    }
+                    if ((a && !is_integer(a)) || (b && !is_integer(b)))
+                        error("invalid-operands", "operands must have integer type", e.span);
                     e.type = usual_conversions(a, b);
                     break;
 
                 case Tok::Lt: case Tok::Gt: case Tok::Le: case Tok::Ge:
                 case Tok::Eq: case Tok::Ne:
-                    if (a && b && !compatible(a, b)) {
+                    if (a && b && !compatible(a, b))
                         error("invalid-operands",
-                              "cannot compare '" + a->to_string() +
-                              "' with '" + b->to_string() + "'", e.span);
-                    }
+                              "cannot compare '" + a->to_string() + "' with '" + b->to_string() + "'", e.span);
                     e.type = Type::make(TypeKind::Int);
                     break;
 
                 case Tok::AndAnd: case Tok::OrOr:
-                    if ((a && !is_scalar(a)) || (b && !is_scalar(b))) {
-                        error("invalid-operands",
-                              "operands must have scalar type", e.span);
-                    }
+                    if ((a && !is_scalar(a)) || (b && !is_scalar(b)))
+                        error("invalid-operands", "operands must have scalar type", e.span);
                     e.type = Type::make(TypeKind::Int);
                     break;
 
@@ -562,16 +527,12 @@ TypePtr Sema::visit_expr(Expr& e) {
             TypePtr rt = decay(e.rhs ? visit_expr(*e.rhs) : nullptr);
 
             if (e.lhs && !is_lvalue(*e.lhs)) {
-                error("invalid-lvalue",
-                      "left operand of assignment is not a modifiable lvalue",
-                      e.span);
+                error("invalid-lvalue", "left operand of assignment is not a modifiable lvalue", e.span);
             } else if (lt && lt->kind == TypeKind::Array) {
-                error("invalid-lvalue",
-                      "cannot assign to an array", e.span);
+                error("invalid-lvalue", "cannot assign to an array", e.span);
             } else if (lt && rt && !compatible(decay(lt), rt)) {
                 error("incompatible-assignment",
-                      "cannot assign '" + rt->to_string() + "' to '" +
-                      lt->to_string() + "'", e.span);
+                      "cannot assign '" + rt->to_string() + "' to '" + lt->to_string() + "'", e.span);
             }
             e.type = lt;
             break;
@@ -580,20 +541,14 @@ TypePtr Sema::visit_expr(Expr& e) {
         case ExprKind::Conditional: {
             if (e.lhs) {
                 TypePtr c = decay(visit_expr(*e.lhs));
-                if (c && !is_scalar(c)) {
-                    error("invalid-condition",
-                          "condition has non-scalar type", e.lhs->span);
-                }
+                if (c && !is_scalar(c))
+                    error("invalid-condition", "condition has non-scalar type", e.lhs->span);
             }
             TypePtr a = decay(e.rhs ? visit_expr(*e.rhs) : nullptr);
             TypePtr b = decay(e.third ? visit_expr(*e.third) : nullptr);
-            if (a && b && !compatible(a, b)) {
-                error("incompatible-branches",
-                      "branches of the conditional have incompatible types",
-                      e.span);
-            }
-            e.type = is_arithmetic(a) && is_arithmetic(b)
-                         ? usual_conversions(a, b) : (a ? a : b);
+            if (a && b && !compatible(a, b))
+                error("incompatible-branches", "branches of the conditional have incompatible types", e.span);
+            e.type = is_arithmetic(a) && is_arithmetic(b) ? usual_conversions(a, b) : (a ? a : b);
             break;
         }
 
@@ -603,16 +558,11 @@ TypePtr Sema::visit_expr(Expr& e) {
             for (auto& a : e.args) ats.push_back(decay(visit_expr(*a)));
 
             TypePtr ft = ct;
-            if (ft && ft->kind == TypeKind::Pointer && ft->base &&
-                ft->base->kind == TypeKind::Function) {
+            if (ft && ft->kind == TypeKind::Pointer && ft->base && ft->base->kind == TypeKind::Function)
                 ft = ft->base;
-            }
             if (!ft || ft->kind != TypeKind::Function) {
-                if (e.lhs && e.lhs->kind == ExprKind::Ident &&
-                    table_.lookup(e.lhs->text)) {
-                    error("not-callable",
-                          "'" + e.lhs->text + "' is not a function", e.span);
-                }
+                if (e.lhs && e.lhs->kind == ExprKind::Ident && table_.lookup(e.lhs->text))
+                    error("not-callable", "'" + e.lhs->text + "' is not a function", e.span);
                 e.type = Type::make(TypeKind::Int);
                 break;
             }
@@ -623,19 +573,18 @@ TypePtr Sema::visit_expr(Expr& e) {
                 ps.push_back(p);
             }
 
-            if (ps.size() != ats.size()) {
+            bool count_ok = ft->variadic ? ats.size() >= ps.size() : ats.size() == ps.size();
+            if (!count_ok) {
                 error("argument-count",
-                      "function expects " + std::to_string(ps.size()) +
-                      " argument" + (ps.size() == 1 ? "" : "s") + " but " +
-                      std::to_string(ats.size()) + " given", e.span);
+                      "function expects " + std::string(ft->variadic ? "at least " : "") +
+                      std::to_string(ps.size()) + " argument" + (ps.size() == 1 ? "" : "s") +
+                      " but " + std::to_string(ats.size()) + " given", e.span);
             } else {
                 for (size_t i = 0; i < ps.size(); ++i) {
                     if (ps[i] && ats[i] && !compatible(decay(ps[i]), ats[i])) {
                         error("argument-type",
-                              "argument " + std::to_string(i + 1) +
-                              " has type '" + ats[i]->to_string() +
-                              "' but '" + ps[i]->to_string() + "' is expected",
-                              e.args[i]->span);
+                              "argument " + std::to_string(i + 1) + " has type '" + ats[i]->to_string() +
+                              "' but '" + ps[i]->to_string() + "' is expected", e.args[i]->span);
                     }
                 }
             }
@@ -643,20 +592,17 @@ TypePtr Sema::visit_expr(Expr& e) {
             break;
         }
 
-        // a[i] is defined as *(a + i), so the base must decay to a pointer
-        // and the subscript must be an integer.
+        // a[i] is defined as *(a + i): the base must decay to a pointer and
+        // the subscript must be an integer.
         case ExprKind::Index: {
             TypePtr b = decay(e.lhs ? visit_expr(*e.lhs) : nullptr);
             TypePtr i = decay(e.rhs ? visit_expr(*e.rhs) : nullptr);
             if (!b || b->kind != TypeKind::Pointer) {
-                error("invalid-subscript",
-                      "subscripted value is not an array or pointer", e.span);
+                error("invalid-subscript", "subscripted value is not an array or pointer", e.span);
                 e.type = Type::make(TypeKind::Int);
             } else {
-                if (i && !is_integer(i)) {
-                    error("invalid-subscript",
-                          "array subscript must have integer type", e.span);
-                }
+                if (i && !is_integer(i))
+                    error("invalid-subscript", "array subscript must have integer type", e.span);
                 e.type = b->base;
             }
             break;
@@ -667,28 +613,22 @@ TypePtr Sema::visit_expr(Expr& e) {
             if (e.arrow) {
                 TypePtr d = decay(b);
                 if (!d || d->kind != TypeKind::Pointer) {
-                    error("invalid-member",
-                          "'->' applied to a value that is not a pointer", e.span);
+                    error("invalid-member", "'->' applied to a value that is not a pointer", e.span);
                     e.type = Type::make(TypeKind::Int);
                     break;
                 }
                 b = d->base;
             }
-            if (!b || b->kind != TypeKind::Struct) {
-                error("invalid-member",
-                      "member access on a value that is not a struct", e.span);
-            }
-            // Member types are resolved once struct layout is recorded;
-            // until then the member is given int so analysis can continue.
+            if (!b || b->kind != TypeKind::Struct)
+                error("invalid-member", "member access on a value that is not a struct", e.span);
             e.type = Type::make(TypeKind::Int);
             break;
         }
 
-        case ExprKind::Cast: {
+        case ExprKind::Cast:
             if (e.lhs) visit_expr(*e.lhs);
             e.type = e.cast_type;
             break;
-        }
 
         case ExprKind::SizeofExpr:
             if (e.lhs) visit_expr(*e.lhs);
@@ -702,25 +642,19 @@ TypePtr Sema::visit_expr(Expr& e) {
         case ExprKind::PreIncDec:
         case ExprKind::PostIncDec: {
             TypePtr t = e.lhs ? visit_expr(*e.lhs) : nullptr;
-            if (e.lhs && !is_lvalue(*e.lhs)) {
-                error("invalid-lvalue",
-                      "operand of increment or decrement is not a modifiable lvalue",
-                      e.span);
-            }
+            if (e.lhs && !is_lvalue(*e.lhs))
+                error("invalid-lvalue", "operand of increment or decrement is not a modifiable lvalue", e.span);
             TypePtr d = decay(t);
-            if (d && !is_scalar(d)) {
-                error("invalid-operand",
-                      "operand of increment or decrement must be scalar", e.span);
-            }
+            if (d && !is_scalar(d))
+                error("invalid-operand", "operand of increment or decrement must be scalar", e.span);
             e.type = t;
             break;
         }
 
-        case ExprKind::Comma: {
+        case ExprKind::Comma:
             if (e.lhs) visit_expr(*e.lhs);
             e.type = e.rhs ? visit_expr(*e.rhs) : nullptr;
             break;
-        }
     }
 
     record_type(&e);

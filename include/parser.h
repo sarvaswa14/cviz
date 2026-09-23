@@ -8,6 +8,7 @@
 
 namespace cviz {
 
+// Recursive-descent parser with precedence climbing for expressions.
 class Parser {
 public:
     Parser(const Source& src, std::vector<Token> toks)

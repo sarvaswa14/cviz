@@ -23,8 +23,7 @@ public:
     void push(const char* kind);
     void pop();
 
-    // Returns nullptr if a symbol of the same name already exists in the
-    // innermost scope.
+    // Returns nullptr if the innermost scope already has this name.
     Symbol* declare(const Symbol& s);
 
     Symbol* lookup(const std::string& name);
@@ -76,10 +75,10 @@ private:
     TypePtr current_return_;
     int  loop_depth_ = 0;
     int  switch_depth_ = 0;
-    std::vector<std::pair<std::string, TypePtr>> functions_;
 
     void error(const std::string& code, const std::string& msg, Span s);
 
+    void declare_builtins();
     void open_scope(const char* kind);
     void close_scope();
     void record_symbol(const Symbol& s);
@@ -89,7 +88,6 @@ private:
     void visit_stmt(Stmt& s);
     TypePtr visit_expr(Expr& e);
 
-    // Type rules, per spec/grammar.md and the C99 conversion rules.
     static bool is_integer(const TypePtr& t);
     static bool is_arithmetic(const TypePtr& t);
     static bool is_scalar(const TypePtr& t);

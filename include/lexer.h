@@ -5,18 +5,20 @@
 
 namespace cviz {
 
+// Hand-written scanner. Produces the whole token stream in one pass and
+// recovers from lexical errors rather than stopping at the first.
 class Lexer {
 public:
     explicit Lexer(const Source& src) : src_(src) {}
 
-    std::vector<Token> tokenise();
+    std::vector<Token> tokenise();   // always ends with EndOfFile
 
     const std::vector<Diagnostic>& diagnostics() const { return diags_; }
     bool failed() const { return !diags_.empty(); }
 
 private:
     const Source& src_;
-    size_t pos_  = 0;    
+    size_t pos_  = 0;
     int    line_ = 1;
     int    col_  = 1;
     std::vector<Diagnostic> diags_;
@@ -26,18 +28,17 @@ private:
     char advance();
     bool match(char expected);
 
-    void skip_trivia();         
+    void skip_trivia();
     Token scan_token();
     Token scan_ident_or_keyword();
     Token scan_number();
     Token scan_char_literal();
     Token scan_string_literal();
     Token scan_punctuator();
-
     int scan_escape();
 
     Span span_from(int start_line, int start_col, int length) const;
     void error(const std::string& code, const std::string& message, Span s);
 };
 
-}  
+}  // namespace cviz

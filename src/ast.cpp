@@ -44,7 +44,7 @@ std::string Type::to_string() const {
         case TypeKind::Float:  return "float";
         case TypeKind::Double: return "double";
         case TypeKind::Bool:   return "_Bool";
-                case TypeKind::Pointer: {
+        case TypeKind::Pointer: {
             // A pointer to an array or function needs parentheses, as in C.
             if (base && (base->kind == TypeKind::Array ||
                          base->kind == TypeKind::Function)) {
@@ -57,7 +57,7 @@ std::string Type::to_string() const {
             return (base ? base->to_string() : "?") + "*";
         }
         case TypeKind::Array: {
-            // Collect dimensions outermost first so they read in
+            // Dimensions are collected outermost first so they read in
             // declaration order.
             std::string dims;
             const Type* t = this;
@@ -76,6 +76,7 @@ std::string Type::to_string() const {
                 if (i) r += ", ";
                 r += params[i] ? params[i]->to_string() : "?";
             }
+            if (variadic) r += params.empty() ? "..." : ", ...";
             return r + ")";
         }
         case TypeKind::Struct:
@@ -110,21 +111,20 @@ const char* Expr::kind_name() const {
 
 std::string Expr::label() const {
     switch (kind) {
-        case ExprKind::IntLit:    return std::to_string(int_value);
-        case ExprKind::CharLit:   return "'" + text + "'";
-        case ExprKind::StringLit: return "\"" + text + "\"";
-        case ExprKind::FloatLit:  return text;
-        case ExprKind::Ident:     return text;
-        case ExprKind::Member:    return (arrow ? "->" : ".") + text;
-        case ExprKind::Cast:      return cast_type ? cast_type->to_string() : "cast";
-        case ExprKind::SizeofType:return cast_type ? cast_type->to_string() : "sizeof";
-        case ExprKind::Index:     return "[]";
-        case ExprKind::Call:      return "()";
+        case ExprKind::IntLit:      return std::to_string(int_value);
+        case ExprKind::CharLit:     return text;
+        case ExprKind::StringLit:   return text;
+        case ExprKind::FloatLit:    return text;
+        case ExprKind::Ident:       return text;
+        case ExprKind::Member:      return (arrow ? "->" : ".") + text;
+        case ExprKind::Cast:        return cast_type ? cast_type->to_string() : "cast";
+        case ExprKind::SizeofType:  return cast_type ? cast_type->to_string() : "sizeof";
+        case ExprKind::Index:       return "[]";
+        case ExprKind::Call:        return "()";
         case ExprKind::Conditional: return "?:";
         default: break;
     }
     if (op != Tok::Error) {
-        // The lexeme is not stored on the node, so map back from the class.
         switch (op) {
             case Tok::Plus: return "+";   case Tok::Minus: return "-";
             case Tok::Star: return "*";   case Tok::Slash: return "/";

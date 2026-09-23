@@ -5,8 +5,8 @@
 
 namespace cviz {
 
-// Writes the structured trace defined in spec/trace-format.md. Phases push
-// events through this; the visualiser is the only consumer.
+// Writes the structured trace defined in spec/trace-format.md. Every phase
+// pushes events through this; the visualiser is its only consumer.
 class Trace {
 public:
     explicit Trace(const Source& src);
@@ -14,8 +14,7 @@ public:
     void begin_phase(const std::string& name);
     void end_phase(bool ok);
 
-    // `fields` is pre-rendered JSON for the event body, without the
-    // enclosing braces, e.g. "\"kind\":\"token\",\"lexeme\":\"sum\"".
+    // `fields` is pre-rendered JSON for the event body without braces.
     void event(int id, const std::string& fields, const Span& s);
     void event(int id, const std::string& fields);
 
@@ -24,6 +23,7 @@ public:
     bool write(const std::string& path) const;
 
     static std::string escape(const std::string& s);
+    static std::string quote(const std::string& s) { return "\"" + escape(s) + "\""; }
     static std::string span_json(const Span& s);
 
 private:

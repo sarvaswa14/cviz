@@ -1,7 +1,7 @@
 CXX      := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -Iinclude -g
+CXXFLAGS := -std=c++17 -Wall -Wextra -Iinclude -O2
 BUILD    := build
-TARGET   := cviz.exe
+TARGET   := cviz
 
 SRCS := $(wildcard src/*.cpp)
 OBJS := $(patsubst src/%.cpp,$(BUILD)/%.o,$(SRCS))
@@ -15,10 +15,12 @@ $(BUILD)/%.o: src/%.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD):
-	@if not exist $(BUILD) mkdir $(BUILD)
+	mkdir -p $(BUILD)
+
+test: $(TARGET)
+	sh tools/evaluate.sh
 
 clean:
-	@if exist $(BUILD) rmdir /s /q $(BUILD)
-	@if exist $(TARGET) del $(TARGET)
+	rm -rf $(BUILD) $(TARGET)
 
-.PHONY: all clean
+.PHONY: all clean test
